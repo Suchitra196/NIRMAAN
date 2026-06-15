@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  OFFICER
+  CONTRACTOR
+}
+
+// NextAuth Required Models
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(OFFICER) // Default role, can be changed by admin
+  
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Custom relations
+  managedProjects Project[] @relation("OfficerProjects")
+  contractedProjects Project[] @relation("ContractorProjects")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// GPOMS Custom Models
+enum ProjectStatus {
+  ONGOING
+  DELAYED
+  COMPLETED
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  name          String
+  description   String?
+  status        ProjectStatus @default(ONGOING)
+  budgetPlanned Float
+  budgetActual  Float         @default(0)
+  tenderAmount  Float
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  officerId     String?
+  officer       User?         @relation("OfficerProjects", fields: [officerId], references: [id])
+  
+  contractorId  String?
+  contractor    User?         @relation("ContractorProjects", fields: [contractorId], references: [id])
+
+  tasks         Task[]
+  installments  Installment[]
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus  @default(PENDING)
+  dueDate     DateTime?
+  
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Installment {
+  id          String   @id @default(cuid())
+  amount      Float
+  datePaid    DateTime @default(now())
+  description String?
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
