@@ -199,116 +199,149 @@ export default function AdminProjectsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/50 backdrop-blur-sm p-4">
-          <div className="bg-surface rounded-lg shadow-lg w-full max-w-lg p-6 border border-outline-variant">
-            <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-outline-variant">
+            <div className="flex justify-between items-center p-6 border-b border-outline-variant sticky top-0 bg-surface z-10">
               <h3 className="text-xl font-bold text-on-background">
                 {editProject ? "Edit Project" : "New Project"}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-on-surface-variant hover:text-on-background"
+                className="text-on-surface-variant hover:text-on-background p-1 rounded hover:bg-surface-container-low transition-colors"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              {/* Project Name */}
               <div>
-                <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Project Name *</label>
+                <label className="block font-label-sm text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
+                  Project Name <span className="text-error">*</span>
+                </label>
                 <input
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
+                  className="w-full px-3 py-2.5 border border-outline-variant rounded-lg font-body-md text-sm bg-surface-container-low focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 focus:outline-none text-on-surface transition-colors"
                   placeholder="Enter project name"
                 />
               </div>
+
+              {/* Description */}
               <div>
-                <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Description</label>
+                <label className="block font-label-sm text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
+                  Description
+                </label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
+                  className="w-full px-3 py-2.5 border border-outline-variant rounded-lg font-body-md text-sm bg-surface-container-low focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 focus:outline-none text-on-surface transition-colors resize-none"
                   rows={2}
                   placeholder="Optional description"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* Budget + Tender — stacked on mobile, side by side on sm+ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Budget Planned (₹) *</label>
+                  <label className="block font-label-sm text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
+                    Budget Planned (₹) <span className="text-error">*</span>
+                  </label>
                   <input
                     required
                     type="number"
+                    min="1"
                     value={form.budgetPlanned}
                     onChange={(e) => setForm({ ...form, budgetPlanned: e.target.value })}
-                    className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
-                    placeholder="0"
+                    className="w-full px-3 py-2.5 border border-outline-variant rounded-lg font-body-md text-sm bg-surface-container-low focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 focus:outline-none text-on-surface transition-colors"
+                    placeholder="e.g. 5000000"
                   />
                 </div>
                 <div>
-                  <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Tender Amount (₹) *</label>
+                  <label className="block font-label-sm text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
+                    Tender Amount (₹) <span className="text-error">*</span>
+                  </label>
                   <input
                     required
                     type="number"
+                    min="1"
                     value={form.tenderAmount}
                     onChange={(e) => setForm({ ...form, tenderAmount: e.target.value })}
-                    className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
-                    placeholder="0"
+                    className="w-full px-3 py-2.5 border border-outline-variant rounded-lg font-body-md text-sm bg-surface-container-low focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 focus:outline-none text-on-surface transition-colors"
+                    placeholder="e.g. 4500000"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Status</label>
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value as "ONGOING" | "DELAYED" | "COMPLETED" })}
-                    className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
-                  >
-                    <option value="ONGOING">Ongoing</option>
-                    <option value="DELAYED">Delayed</option>
-                    <option value="COMPLETED">Completed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Contractor</label>
-                  <select
-                    value={form.contractorId}
-                    onChange={(e) => setForm({ ...form, contractorId: e.target.value })}
-                    className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
-                  >
-                    <option value="">None</option>
-                    {contractors.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name || c.email}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+
+              {/* Status */}
               <div>
-                <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Officer</label>
+                <label className="block font-label-sm text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
+                  Status
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as "ONGOING" | "DELAYED" | "COMPLETED" })}
+                  className="w-full px-3 py-2.5 border border-outline-variant rounded-lg font-body-md text-sm bg-surface-container-low focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 focus:outline-none text-on-surface transition-colors"
+                >
+                  <option value="ONGOING">Ongoing</option>
+                  <option value="DELAYED">Delayed</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+
+              {/* Officer */}
+              <div>
+                <label className="block font-label-sm text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
+                  Assign Officer
+                </label>
                 <select
                   value={form.officerId}
                   onChange={(e) => setForm({ ...form, officerId: e.target.value })}
-                  className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
+                  className="w-full px-3 py-2.5 border border-outline-variant rounded-lg font-body-md text-sm bg-surface-container-low focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 focus:outline-none text-on-surface transition-colors"
                 >
-                  <option value="">None</option>
+                  <option value="">— Select officer —</option>
                   {officers.map((o) => (
                     <option key={o.id} value={o.id}>{o.name || o.email}</option>
                   ))}
                 </select>
+                {officers.length === 0 && (
+                  <p className="text-xs text-on-surface-variant mt-1">No officers found. Register officers first.</p>
+                )}
               </div>
-              <div className="flex justify-end gap-3 pt-2">
+
+              {/* Contractor */}
+              <div>
+                <label className="block font-label-sm text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">
+                  Assign Contractor
+                </label>
+                <select
+                  value={form.contractorId}
+                  onChange={(e) => setForm({ ...form, contractorId: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-outline-variant rounded-lg font-body-md text-sm bg-surface-container-low focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 focus:outline-none text-on-surface transition-colors"
+                >
+                  <option value="">— Select contractor —</option>
+                  {contractors.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name || c.email}</option>
+                  ))}
+                </select>
+                {contractors.length === 0 && (
+                  <p className="text-xs text-on-surface-variant mt-1">No contractors found. Register contractors first.</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-2 border-t border-outline-variant">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-md py-2 border border-outline-variant rounded font-title-md text-sm hover:bg-surface-container-low transition-colors"
+                  className="px-5 py-2.5 border border-outline-variant rounded-lg font-title-md text-sm hover:bg-surface-container-low transition-colors text-on-surface"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-md py-2 bg-primary-container text-on-primary rounded font-title-md text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="px-5 py-2.5 bg-primary text-on-primary rounded-lg font-title-md text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   {submitting ? "Saving..." : editProject ? "Save Changes" : "Create Project"}
                 </button>
