@@ -2,23 +2,26 @@
 
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Sidebar from "@/components/Sidebar"
 import TopBar from "@/components/TopBar"
 import MobileNav from "@/components/MobileNav"
+import type { NavItem } from "@/components/Sidebar"
 
-const adminNavItems = [
+const baseNavItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: "dashboard" },
   { label: "Projects", href: "/admin/projects", icon: "account_tree" },
   { label: "Officers", href: "/admin/officers", icon: "badge" },
   { label: "Finance", href: "/admin/finance", icon: "payments" },
   { label: "Reports", href: "/admin/reports", icon: "description" },
+  { label: "Requests", href: "/admin/requests", icon: "pending_actions" },
   { label: "Settings", href: "/admin/settings", icon: "settings" },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -31,6 +34,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       else router.replace("/login")
     }
   }, [status, session, router])
+
+  // Fetch pending requests count
+  useEffect(() => {
+    async function fetchPendingCount() {
+      if (status !== "authenticated" || session?.user?.role !== "ADMIN") return
+      try {
+        const res = await fetch("/api/login-requests?status=PENDING")
+        if (res.ok) {
+          const data = await res.json()
+          setPendingCount(Array.isArray(data) ? data.length : 0)
+        }
+      } catch {
+        // silent
+      }
+    }
+    fetchPendingCount()
+  }, [status, session])
+
+  const navItems: NavItem[] = baseNavItems.map((item) =>
+    item.href === "/admin/requests"
+      ? { ...item, badge: pendingCount }
+      : item
+  )
 
   if (status === "loading") {
     return (
@@ -46,14 +72,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-on-background font-body-md">
-      <Sidebar navItems={adminNavItems} />
+      <Sidebar navItems={navItems} />
       <div className="flex-1 flex flex-col md:ml-[280px] h-full overflow-hidden">
         <TopBar />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-surface-bright pb-20 md:pb-8">
           {children}
         </main>
       </div>
-      <MobileNav navItems={adminNavItems} />
+      <MobileNav navItems={navItems} />
     </div>
   )
 }

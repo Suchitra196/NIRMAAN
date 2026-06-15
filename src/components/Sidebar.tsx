@@ -3,11 +3,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
+import { useEffect, useState } from "react"
 
 export interface NavItem {
   label: string
   href: string
   icon: string
+  badge?: number
 }
 
 interface SidebarProps {
@@ -19,6 +21,25 @@ interface SidebarProps {
 export default function Sidebar({ navItems, showNewProject, onNewProject }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchProfileImage() {
+      if (!session) return
+      try {
+        const res = await fetch("/api/users/profile")
+        if (res.ok) {
+          const data = await res.json()
+          setProfileImage(data.profileImage || null)
+        }
+      } catch {
+        // silent — fall back to session image
+      }
+    }
+    fetchProfileImage()
+  }, [session])
+
+  const avatarSrc = profileImage || session?.user?.image || null
 
   return (
     <nav className="fixed left-0 h-full w-[280px] bg-primary text-on-primary shadow-sm flex-col py-lg border-r border-outline-variant/20 hidden md:flex z-40">
@@ -60,7 +81,12 @@ export default function Sidebar({ navItems, showNewProject, onNewProject }: Side
                 }`}
               >
                 <span className="material-symbols-outlined">{item.icon}</span>
-                <span className="font-body-md text-base">{item.label}</span>
+                <span className="font-body-md text-base flex-1">{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold flex-shrink-0">
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                )}
               </Link>
             </li>
           )
@@ -72,8 +98,9 @@ export default function Sidebar({ navItems, showNewProject, onNewProject }: Side
         <li>
           <div className="flex items-center gap-xs px-md py-sm text-on-primary/70">
             <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant overflow-hidden flex-shrink-0">
-              {session?.user?.image ? (
-                <img alt="Profile" className="w-full h-full object-cover" src={session.user.image} />
+              {avatarSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt="Profile" className="w-full h-full object-cover" src={avatarSrc} />
               ) : (
                 <span className="material-symbols-outlined text-on-surface-variant text-xl flex items-center justify-center w-full h-full">person</span>
               )}

@@ -12,6 +12,12 @@ enum Role {
   CONTRACTOR
 }
 
+enum LoginRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // NextAuth Required Models
 model Account {
   id                 String  @id @default(cuid())
@@ -47,6 +53,9 @@ model User {
   emailVerified DateTime?
   image         String?
   role          Role      @default(OFFICER) // Default role, can be changed by admin
+  profileImage  String?   // user-uploaded profile picture (base64 data URL or URL)
+  password      String?   // bcrypt hashed, null for Google OAuth users
+  phone         String?   // optional phone number
   
   accounts      Account[]
   sessions      Session[]
@@ -54,6 +63,19 @@ model User {
   // Custom relations
   managedProjects Project[] @relation("OfficerProjects")
   contractedProjects Project[] @relation("ContractorProjects")
+}
+
+model LoginRequest {
+  id            String             @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  password      String             // hashed with bcrypt
+  requestedRole Role
+  status        LoginRequestStatus @default(PENDING)
+  adminNote     String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 }
 
 model VerificationToken {
