@@ -36,6 +36,7 @@ export default function AdminProjectsPage() {
     budgetPlanned: "",
     tenderAmount: "",
     contractorId: "",
+    officerId: "",
     status: "ONGOING" as "ONGOING" | "DELAYED" | "COMPLETED",
   })
 
@@ -61,7 +62,7 @@ export default function AdminProjectsPage() {
 
   function openCreate() {
     setEditProject(null)
-    setForm({ name: "", description: "", budgetPlanned: "", tenderAmount: "", contractorId: "", status: "ONGOING" })
+    setForm({ name: "", description: "", budgetPlanned: "", tenderAmount: "", contractorId: "", officerId: "", status: "ONGOING" })
     setShowModal(true)
   }
 
@@ -73,6 +74,7 @@ export default function AdminProjectsPage() {
       budgetPlanned: String(p.budgetPlanned),
       tenderAmount: String(p.tenderAmount),
       contractorId: p.contractor?.id || "",
+      officerId: p.officer?.id || "",
       status: p.status,
     })
     setShowModal(true)
@@ -281,6 +283,19 @@ export default function AdminProjectsPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Officer</label>
+                <select
+                  value={form.officerId}
+                  onChange={(e) => setForm({ ...form, officerId: e.target.value })}
+                  className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none"
+                >
+                  <option value="">None</option>
+                  {officers.map((o) => (
+                    <option key={o.id} value={o.id}>{o.name || o.email}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button

@@ -42,7 +42,7 @@ export default function Sidebar({ navItems, showNewProject, onNewProject }: Side
   const avatarSrc = profileImage || session?.user?.image || null
 
   return (
-    <nav className="fixed left-0 h-full w-[280px] bg-primary text-on-primary shadow-sm flex-col py-lg border-r border-outline-variant/20 hidden md:flex z-40">
+    <nav className="fixed left-0 top-0 h-screen w-[280px] bg-primary text-on-primary shadow-sm flex-col py-lg border-r border-outline-variant/20 hidden md:flex z-40">
       {/* Header */}
       <div className="px-md mb-xl flex items-center gap-sm">
         <div className="w-12 h-12 rounded-full bg-on-primary flex items-center justify-center flex-shrink-0">

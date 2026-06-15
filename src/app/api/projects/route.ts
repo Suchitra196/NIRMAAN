@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, description, budgetPlanned, tenderAmount, contractorId } = body
+    const { name, description, budgetPlanned, tenderAmount, contractorId, officerId } = body
 
     if (!name || !budgetPlanned || !tenderAmount) {
       return NextResponse.json(
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         description,
         budgetPlanned: parseFloat(budgetPlanned),
         tenderAmount: parseFloat(tenderAmount),
-        officerId: user?.id,
+        officerId: officerId || user?.id,
         contractorId,
       },
       include: {

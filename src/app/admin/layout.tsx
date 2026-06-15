@@ -71,11 +71,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-on-background font-body-md">
+    <div className="flex min-h-screen bg-background text-on-background font-body-md">
       <Sidebar navItems={navItems} />
-      <div className="flex-1 flex flex-col md:ml-[280px] h-full overflow-hidden">
+      <div className="flex-1 flex flex-col md:ml-[280px] min-h-screen">
         <TopBar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-surface-bright pb-20 md:pb-8">
+        <main className="flex-1 p-4 md:p-8 bg-surface-bright pb-20 md:pb-8">
           {children}
         </main>
       </div>

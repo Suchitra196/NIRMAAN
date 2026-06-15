@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import StatusBadge from "@/components/StatusBadge"
 
@@ -19,6 +19,16 @@ interface Installment {
   description: string | null
 }
 
+interface PaymentRequest {
+  id: string
+  amount: number
+  description: string
+  status: "PENDING" | "APPROVED" | "REJECTED"
+  officerNote: string | null
+  createdAt: string
+  task: { id: string; title: string } | null
+}
+
 interface Project {
   id: string
   name: string
@@ -32,6 +42,28 @@ interface Project {
   installments: Installment[]
 }
 
+function PaymentStatusBadge({ status }: { status: "PENDING" | "APPROVED" | "REJECTED" }) {
+  if (status === "APPROVED") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-tertiary-container/10 text-on-tertiary-container border border-tertiary-container/20">
+        Approved
+      </span>
+    )
+  }
+  if (status === "REJECTED") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-error/10 text-error border border-error/20">
+        Rejected
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-surface-container text-on-surface-variant border border-outline-variant">
+      Pending
+    </span>
+  )
+}
+
 export default function ContractorProjectDetailPage({
   params,
 }: {
@@ -41,6 +73,16 @@ export default function ContractorProjectDetailPage({
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingTask, setUpdatingTask] = useState<string | null>(null)
+
+  // Payment request state
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([])
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [paymentForm, setPaymentForm] = useState({ amount: "", description: "" })
+  const [proofImages, setProofImages] = useState<string[]>([])
+  const [submittingPayment, setSubmittingPayment] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadProject() {
     try {
@@ -53,7 +95,24 @@ export default function ContractorProjectDetailPage({
     }
   }
 
-  useEffect(() => { loadProject() }, [id])
+  async function loadPaymentRequests() {
+    try {
+      const res = await fetch(`/api/payment-requests?projectId=${id}`)
+      if (res.ok) setPaymentRequests(await res.json())
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadProject()
+    loadPaymentRequests()
+  }, [id])
+
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 4000)
+  }
 
   async function updateTaskStatus(taskId: string, newStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED") {
     setUpdatingTask(taskId)
@@ -68,6 +127,82 @@ export default function ContractorProjectDetailPage({
       console.error(e)
     } finally {
       setUpdatingTask(null)
+    }
+  }
+
+  function openPaymentModal(task: Task) {
+    setSelectedTask(task)
+    setPaymentForm({ amount: "", description: "" })
+    setProofImages([])
+    setShowPaymentModal(true)
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    if (proofImages.length + files.length > 5) {
+      showToast("Maximum 5 images allowed.")
+      return
+    }
+    files.forEach((file) => {
+      if (file.size > 2 * 1024 * 1024) {
+        showToast(`${file.name} exceeds 2MB limit.`)
+        return
+      }
+      if (!file.type.startsWith("image/")) {
+        showToast(`${file.name} is not an image.`)
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string
+        setProofImages((prev) => [...prev, dataUrl])
+      }
+      reader.readAsDataURL(file)
+    })
+    // Reset input so the same file can be re-selected
+    e.target.value = ""
+  }
+
+  function removeImage(idx: number) {
+    setProofImages((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  async function handlePaymentSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+      showToast("Amount must be greater than 0.")
+      return
+    }
+    if (!paymentForm.description.trim()) {
+      showToast("Description is required.")
+      return
+    }
+    setSubmittingPayment(true)
+    try {
+      const res = await fetch("/api/payment-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: id,
+          taskId: selectedTask?.id,
+          amount: parseFloat(paymentForm.amount),
+          description: paymentForm.description,
+          proofImages,
+        }),
+      })
+      if (res.ok) {
+        setShowPaymentModal(false)
+        showToast("Payment request submitted. Your officer has been notified.")
+        await loadPaymentRequests()
+      } else {
+        const data = await res.json()
+        showToast(data.error || "Failed to submit payment request.")
+      }
+    } catch (e) {
+      console.error(e)
+      showToast("Failed to submit payment request.")
+    } finally {
+      setSubmittingPayment(false)
     }
   }
 
@@ -97,6 +232,13 @@ export default function ContractorProjectDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-20 right-4 z-50 bg-on-background text-background px-4 py-3 rounded shadow-lg text-sm max-w-sm">
+          {toast}
+        </div>
+      )}
+
       <div>
         <Link href="/contractor/projects" className="text-sm text-primary-container hover:underline flex items-center gap-1 mb-3">
           <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Contracts
@@ -153,7 +295,7 @@ export default function ContractorProjectDetailPage({
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   <StatusBadge status={task.status} />
                   <select
                     value={task.status}
@@ -165,9 +307,57 @@ export default function ContractorProjectDetailPage({
                     <option value="IN_PROGRESS">In Progress</option>
                     <option value="COMPLETED">Completed</option>
                   </select>
+                  {(task.status === "IN_PROGRESS" || task.status === "PENDING") && (
+                    <button
+                      onClick={() => openPaymentModal(task)}
+                      className="text-xs bg-primary-container text-on-primary px-2 py-1 rounded font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      Request Payment
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* My Payment Requests */}
+      <div className="bg-surface border border-outline-variant rounded-lg overflow-hidden">
+        <div className="p-6 border-b border-outline-variant">
+          <h3 className="text-xl font-bold text-on-background">My Payment Requests ({paymentRequests.length})</h3>
+        </div>
+        {paymentRequests.length === 0 ? (
+          <div className="p-12 text-center text-on-surface-variant">
+            <span className="material-symbols-outlined text-4xl mb-2 block">receipt_long</span>
+            <p>No payment requests submitted yet.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-surface-container-low border-b border-outline-variant">
+                <tr>
+                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Description</th>
+                  <th className="p-4 text-sm font-semibold text-on-surface-variant text-right">Amount</th>
+                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Task</th>
+                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Status</th>
+                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Date</th>
+                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Note</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/50">
+                {paymentRequests.map((pr) => (
+                  <tr key={pr.id} className="hover:bg-surface-container-lowest transition-colors">
+                    <td className="p-4 text-on-background max-w-[180px] truncate">{pr.description}</td>
+                    <td className="p-4 text-right font-medium text-on-tertiary-container">{formatCurrency(pr.amount)}</td>
+                    <td className="p-4 text-sm text-on-surface-variant">{pr.task?.title || "—"}</td>
+                    <td className="p-4"><PaymentStatusBadge status={pr.status} /></td>
+                    <td className="p-4 text-sm text-on-surface-variant">{new Date(pr.createdAt).toLocaleDateString("en-IN")}</td>
+                    <td className="p-4 text-sm text-on-surface-variant max-w-[140px] truncate">{pr.officerNote || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -207,6 +397,110 @@ export default function ContractorProjectDetailPage({
           </div>
         )}
       </div>
+
+      {/* Payment Request Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/50 backdrop-blur-sm p-4">
+          <div className="bg-surface rounded-lg shadow-lg w-full max-w-lg p-6 border border-outline-variant max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-on-background">Request Payment</h3>
+              <button onClick={() => setShowPaymentModal(false)} className="text-on-surface-variant hover:text-on-background">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handlePaymentSubmit} className="space-y-4">
+              {selectedTask && (
+                <div>
+                  <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Task</label>
+                  <div className="w-full p-2 border border-outline-variant rounded font-body-md text-sm bg-surface-container-low text-on-surface-variant">
+                    {selectedTask.title}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Amount (₹) *</label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                  className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none bg-surface"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block font-label-sm text-xs text-on-surface-variant mb-1">Description (work done) *</label>
+                <textarea
+                  required
+                  value={paymentForm.description}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full p-2 border border-outline-variant rounded font-body-md text-sm focus:border-primary-container focus:ring-1 focus:ring-primary-container/50 focus:outline-none bg-surface resize-none"
+                  placeholder="Describe the work completed..."
+                />
+              </div>
+              <div>
+                <label className="block font-label-sm text-xs text-on-surface-variant mb-1">
+                  Proof Images ({proofImages.length}/5)
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={proofImages.length >= 5}
+                  className="flex items-center gap-2 border border-dashed border-outline-variant rounded px-3 py-2 text-sm text-on-surface-variant hover:bg-surface-container-low transition-colors disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[18px]">upload</span>
+                  Add images (max 5, 2MB each)
+                </button>
+                {proofImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {proofImages.map((img, idx) => (
+                      <div key={idx} className="relative w-16 h-16 rounded overflow-hidden border border-outline-variant">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          className="absolute top-0 right-0 bg-error text-on-error rounded-bl p-0.5"
+                          aria-label="Remove image"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">close</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="px-md py-2 border border-outline-variant rounded font-title-md text-sm hover:bg-surface-container-low transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingPayment}
+                  className="px-md py-2 bg-primary-container text-on-primary rounded font-title-md text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {submittingPayment ? "Submitting..." : "Submit Request"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

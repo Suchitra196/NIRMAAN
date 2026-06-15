@@ -19,6 +19,18 @@ interface Installment {
   description: string | null
 }
 
+interface PaymentRequest {
+  id: string
+  amount: number
+  description: string
+  status: "PENDING" | "APPROVED" | "REJECTED"
+  officerNote: string | null
+  proofImages: string[]
+  createdAt: string
+  contractor: { id: string; name: string | null; email: string | null }
+  task: { id: string; title: string } | null
+}
+
 interface Project {
   id: string
   name: string
@@ -33,6 +45,28 @@ interface Project {
   installments: Installment[]
 }
 
+function PaymentStatusBadge({ status }: { status: "PENDING" | "APPROVED" | "REJECTED" }) {
+  if (status === "APPROVED") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-tertiary-container/10 text-on-tertiary-container border border-tertiary-container/20">
+        Approved
+      </span>
+    )
+  }
+  if (status === "REJECTED") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-error/10 text-error border border-error/20">
+        Rejected
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-surface-container text-on-surface-variant border border-outline-variant">
+      Pending
+    </span>
+  )
+}
+
 export default function OfficerProjectDetailPage({
   params,
 }: {
@@ -42,6 +76,12 @@ export default function OfficerProjectDetailPage({
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingTask, setUpdatingTask] = useState<string | null>(null)
+
+  // Payment requests
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([])
+  const [actionState, setActionState] = useState<Record<string, { mode: "approve" | "reject" | null; datePaid: string; rejectNote: string }>>({})
+  const [processingId, setProcessingId] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
 
   async function loadProject() {
     try {
@@ -54,7 +94,24 @@ export default function OfficerProjectDetailPage({
     }
   }
 
-  useEffect(() => { loadProject() }, [id])
+  async function loadPaymentRequests() {
+    try {
+      const res = await fetch(`/api/payment-requests?projectId=${id}&status=PENDING`)
+      if (res.ok) setPaymentRequests(await res.json())
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadProject()
+    loadPaymentRequests()
+  }, [id])
+
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 4000)
+  }
 
   async function updateTaskStatus(taskId: string, newStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED") {
     setUpdatingTask(taskId)
@@ -69,6 +126,60 @@ export default function OfficerProjectDetailPage({
       console.error(e)
     } finally {
       setUpdatingTask(null)
+    }
+  }
+
+  function getActionState(prId: string) {
+    return actionState[prId] || { mode: null, datePaid: "", rejectNote: "" }
+  }
+
+  function setMode(prId: string, mode: "approve" | "reject" | null) {
+    setActionState((prev) => ({
+      ...prev,
+      [prId]: { ...getActionState(prId), mode },
+    }))
+  }
+
+  function setDatePaid(prId: string, datePaid: string) {
+    setActionState((prev) => ({
+      ...prev,
+      [prId]: { ...getActionState(prId), datePaid },
+    }))
+  }
+
+  function setRejectNote(prId: string, rejectNote: string) {
+    setActionState((prev) => ({
+      ...prev,
+      [prId]: { ...getActionState(prId), rejectNote },
+    }))
+  }
+
+  async function handleAction(prId: string, action: "approve" | "reject") {
+    setProcessingId(prId)
+    const state = getActionState(prId)
+    try {
+      const res = await fetch(`/api/payment-requests/${prId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          ...(action === "approve" && state.datePaid ? { datePaid: state.datePaid } : {}),
+          ...(action === "reject" && state.rejectNote ? { officerNote: state.rejectNote } : {}),
+        }),
+      })
+      if (res.ok) {
+        showToast(action === "approve" ? "Payment approved and installment recorded." : "Payment request rejected.")
+        await loadProject()
+        await loadPaymentRequests()
+      } else {
+        const data = await res.json()
+        showToast(data.error || "Action failed.")
+      }
+    } catch (e) {
+      console.error(e)
+      showToast("Action failed.")
+    } finally {
+      setProcessingId(null)
     }
   }
 
@@ -98,6 +209,13 @@ export default function OfficerProjectDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-20 right-4 z-50 bg-on-background text-background px-4 py-3 rounded shadow-lg text-sm max-w-sm">
+          {toast}
+        </div>
+      )}
+
       {/* Back + Header */}
       <div>
         <Link href="/officer/projects" className="text-sm text-primary-container hover:underline flex items-center gap-1 mb-3">
@@ -206,6 +324,128 @@ export default function OfficerProjectDetailPage({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      {/* Payment Requests */}
+      <div className="bg-surface border border-outline-variant rounded-lg overflow-hidden">
+        <div className="p-6 border-b border-outline-variant">
+          <h3 className="text-xl font-bold text-on-background">
+            Pending Payment Requests ({paymentRequests.length})
+          </h3>
+        </div>
+        {paymentRequests.length === 0 ? (
+          <div className="p-12 text-center text-on-surface-variant">
+            <span className="material-symbols-outlined text-4xl mb-2 block">payments</span>
+            <p>No pending payment requests.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-outline-variant/50">
+            {paymentRequests.map((pr) => {
+              const state = getActionState(pr.id)
+              return (
+                <div key={pr.id} className="p-6 space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-on-background">{pr.contractor.name || pr.contractor.email}</span>
+                        <PaymentStatusBadge status={pr.status} />
+                      </div>
+                      <p className="text-sm text-on-surface-variant">{pr.description}</p>
+                      {pr.task && (
+                        <p className="text-xs text-on-surface-variant mt-1">Task: {pr.task.title}</p>
+                      )}
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        {new Date(pr.createdAt).toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xl font-bold text-primary-container">{formatCurrency(pr.amount)}</p>
+                    </div>
+                  </div>
+
+                  {/* Proof Images */}
+                  {pr.proofImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {pr.proofImages.map((img, idx) => (
+                        <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block w-16 h-16 rounded overflow-hidden border border-outline-variant hover:opacity-80 transition-opacity">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={img} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  {state.mode === null && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setMode(pr.id, "approve")}
+                        className="px-3 py-1.5 bg-on-tertiary-container text-on-primary rounded text-sm font-semibold hover:opacity-90 transition-opacity"
+                      >
+                        Approve Payment
+                      </button>
+                      <button
+                        onClick={() => setMode(pr.id, "reject")}
+                        className="px-3 py-1.5 border border-error text-error rounded text-sm font-semibold hover:bg-error/10 transition-colors"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+
+                  {state.mode === "approve" && (
+                    <div className="flex items-end gap-2 flex-wrap">
+                      <div>
+                        <label className="block text-xs text-on-surface-variant mb-1">Date Paid</label>
+                        <input
+                          type="date"
+                          value={state.datePaid}
+                          onChange={(e) => setDatePaid(pr.id, e.target.value)}
+                          className="p-2 border border-outline-variant rounded text-sm focus:border-primary-container focus:outline-none bg-surface"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleAction(pr.id, "approve")}
+                        disabled={processingId === pr.id}
+                        className="px-3 py-2 bg-on-tertiary-container text-on-primary rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+                      >
+                        {processingId === pr.id ? "Processing..." : "Confirm Approve"}
+                      </button>
+                      <button onClick={() => setMode(pr.id, null)} className="px-3 py-2 border border-outline-variant rounded text-sm hover:bg-surface-container-low">
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {state.mode === "reject" && (
+                    <div className="flex items-end gap-2 flex-wrap">
+                      <div className="flex-1 min-w-[200px]">
+                        <label className="block text-xs text-on-surface-variant mb-1">Reason (optional)</label>
+                        <input
+                          type="text"
+                          value={state.rejectNote}
+                          onChange={(e) => setRejectNote(pr.id, e.target.value)}
+                          placeholder="Reason for rejection..."
+                          className="w-full p-2 border border-outline-variant rounded text-sm focus:border-error focus:outline-none bg-surface"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleAction(pr.id, "reject")}
+                        disabled={processingId === pr.id}
+                        className="px-3 py-2 bg-error text-on-error rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+                      >
+                        {processingId === pr.id ? "Processing..." : "Confirm Reject"}
+                      </button>
+                      <button onClick={() => setMode(pr.id, null)} className="px-3 py-2 border border-outline-variant rounded text-sm hover:bg-surface-container-low">
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

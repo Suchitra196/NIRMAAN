@@ -13,15 +13,26 @@ interface Project {
   tasks?: { id: string; status: string }[]
 }
 
+interface PaymentRequest {
+  id: string
+  amount: number
+  status: "PENDING" | "APPROVED" | "REJECTED"
+}
+
 export default function AdminReportsPage() {
   const [projects, setProjects] = useState<Project[]>([])
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/projects")
-        if (res.ok) setProjects(await res.json())
+        const [pRes, prRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/payment-requests"),
+        ])
+        if (pRes.ok) setProjects(await pRes.json())
+        if (prRes.ok) setPaymentRequests(await prRes.json())
       } catch (e) {
         console.error(e)
       } finally {
@@ -35,6 +46,11 @@ export default function AdminReportsPage() {
   const delayed = projects.filter((p) => p.status === "DELAYED").length
   const completed = projects.filter((p) => p.status === "COMPLETED").length
   const total = projects.length
+
+  const pendingPR = paymentRequests.filter((r) => r.status === "PENDING").length
+  const approvedPR = paymentRequests.filter((r) => r.status === "APPROVED")
+  const rejectedPR = paymentRequests.filter((r) => r.status === "REJECTED").length
+  const approvedTotal = approvedPR.reduce((s, r) => s + r.amount, 0)
 
   const formatCurrency = (val: number) => {
     if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)}Cr`
@@ -74,6 +90,31 @@ export default function AdminReportsPage() {
         <div className="bg-surface border border-outline-variant rounded-lg p-5 text-center">
           <p className="text-3xl font-bold text-on-tertiary-container">{completed}</p>
           <p className="text-sm text-on-surface-variant mt-1">Completed</p>
+        </div>
+      </div>
+
+      {/* Payment Request Statistics */}
+      <div>
+        <h3 className="text-xl font-bold text-on-background mb-3">Payment Request Statistics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-surface border border-outline-variant rounded-lg p-5 relative">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-surface-container-highest rounded-l-lg"></div>
+            <p className="text-sm text-on-surface-variant mb-1">Pending Requests</p>
+            <p className="text-3xl font-bold text-on-background">{pendingPR}</p>
+            <p className="text-xs text-on-surface-variant mt-1">Awaiting officer review</p>
+          </div>
+          <div className="bg-surface border border-outline-variant rounded-lg p-5 relative">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-on-tertiary-container rounded-l-lg"></div>
+            <p className="text-sm text-on-surface-variant mb-1">Total Approved Amount</p>
+            <p className="text-2xl font-bold text-on-tertiary-container">{formatCurrency(approvedTotal)}</p>
+            <p className="text-xs text-on-surface-variant mt-1">{approvedPR.length} requests approved</p>
+          </div>
+          <div className="bg-surface border border-outline-variant rounded-lg p-5 relative">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-error rounded-l-lg"></div>
+            <p className="text-sm text-on-surface-variant mb-1">Rejected Requests</p>
+            <p className="text-3xl font-bold text-error">{rejectedPR}</p>
+            <p className="text-xs text-on-surface-variant mt-1">Total rejected</p>
+          </div>
         </div>
       </div>
 

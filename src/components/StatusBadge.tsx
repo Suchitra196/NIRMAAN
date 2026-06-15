@@ -1,5 +1,5 @@
 interface StatusBadgeProps {
-  status: "ONGOING" | "DELAYED" | "COMPLETED" | "PENDING" | "IN_PROGRESS"
+  status: "ONGOING" | "DELAYED" | "COMPLETED" | "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED"
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
@@ -23,6 +23,14 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
     IN_PROGRESS: {
       label: "In Progress",
       className: "bg-primary-container/10 text-primary-container border border-primary-container/20",
+    },
+    APPROVED: {
+      label: "Approved",
+      className: "bg-tertiary-container/10 text-on-tertiary-container border border-tertiary-container/20",
+    },
+    REJECTED: {
+      label: "Rejected",
+      className: "bg-error/10 text-error border border-error/20",
     },
   }
 

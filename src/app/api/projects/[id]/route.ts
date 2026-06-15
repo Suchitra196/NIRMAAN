@@ -67,7 +67,7 @@ export async function PUT(
     }
 
     const body = await req.json()
-    const { name, description, status, budgetPlanned, budgetActual, tenderAmount, contractorId } = body
+    const { name, description, status, budgetPlanned, budgetActual, tenderAmount, contractorId, officerId } = body
 
     const updated = await prisma.project.update({
       where: { id },
@@ -79,6 +79,7 @@ export async function PUT(
         ...(budgetActual && { budgetActual: parseFloat(budgetActual) }),
         ...(tenderAmount && { tenderAmount: parseFloat(tenderAmount) }),
         ...(contractorId && { contractorId }),
+        ...(officerId !== undefined && { officerId: officerId || null }),
       },
       include: {
         officer: { select: { id: true, name: true, email: true } },

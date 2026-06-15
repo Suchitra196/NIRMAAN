@@ -18,6 +18,12 @@ enum LoginRequestStatus {
   REJECTED
 }
 
+enum PaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // NextAuth Required Models
 model Account {
   id                 String  @id @default(cuid())
@@ -52,17 +58,20 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  role          Role      @default(OFFICER) // Default role, can be changed by admin
-  profileImage  String?   // user-uploaded profile picture (base64 data URL or URL)
-  password      String?   // bcrypt hashed, null for Google OAuth users
-  phone         String?   // optional phone number
-  
+  role          Role      @default(OFFICER)
+  profileImage  String?
+  password      String?
+  phone         String?
+
   accounts      Account[]
   sessions      Session[]
-  
+
   // Custom relations
-  managedProjects Project[] @relation("OfficerProjects")
-  contractedProjects Project[] @relation("ContractorProjects")
+  managedProjects         Project[]        @relation("OfficerProjects")
+  contractedProjects      Project[]        @relation("ContractorProjects")
+  notifications           Notification[]
+  contractorPaymentReqs   PaymentRequest[] @relation("ContractorPaymentRequests")
+  officerPaymentReqs      PaymentRequest[] @relation("OfficerPaymentRequests")
 }
 
 model LoginRequest {
@@ -70,7 +79,7 @@ model LoginRequest {
   name          String
   email         String?
   phone         String?
-  password      String             // hashed with bcrypt
+  password      String
   requestedRole Role
   status        LoginRequestStatus @default(PENDING)
   adminNote     String?
@@ -101,19 +110,20 @@ model Project {
   budgetPlanned Float
   budgetActual  Float         @default(0)
   tenderAmount  Float
-  
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   // Relations
   officerId     String?
   officer       User?         @relation("OfficerProjects", fields: [officerId], references: [id])
-  
+
   contractorId  String?
   contractor    User?         @relation("ContractorProjects", fields: [contractorId], references: [id])
 
-  tasks         Task[]
-  installments  Installment[]
+  tasks           Task[]
+  installments    Installment[]
+  paymentRequests PaymentRequest[]
 }
 
 enum TaskStatus {
@@ -128,9 +138,11 @@ model Task {
   description String?
   status      TaskStatus  @default(PENDING)
   dueDate     DateTime?
-  
+
   projectId   String
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  paymentRequests PaymentRequest[]
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -144,4 +156,39 @@ model Installment {
 
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model PaymentRequest {
+  id           String               @id @default(cuid())
+  amount       Float
+  description  String
+  proofImages  String[]
+  status       PaymentRequestStatus @default(PENDING)
+  officerNote  String?
+
+  taskId       String?
+  task         Task?                @relation(fields: [taskId], references: [id])
+
+  projectId    String
+  project      Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  contractorId String
+  contractor   User                 @relation("ContractorPaymentRequests", fields: [contractorId], references: [id])
+
+  officerId    String?
+  officer      User?                @relation("OfficerPaymentRequests", fields: [officerId], references: [id])
+
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
 }
