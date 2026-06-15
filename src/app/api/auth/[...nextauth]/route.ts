@@ -25,7 +25,7 @@ export const authOptions: AuthOptions = {
 
         const identifier = credentials.identifier.trim()
 
-        // Find user by email or phone
+        // Find user by email OR phone
         const user = await prisma.user.findFirst({
           where: {
             OR: [
@@ -49,8 +49,7 @@ export const authOptions: AuthOptions = {
           name: user.name,
           email: user.email,
           role: user.role,
-          image: user.image,
-          profileImage: user.profileImage,
+          image: user.profileImage || user.image,
         }
       },
     }),
@@ -59,11 +58,31 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      // On first sign-in, seed id from the user object
       if (user) {
-        token.role = (user as any).role
         token.id = user.id
       }
+
+      // ALWAYS re-fetch the role (and id) from the database so stale JWT tokens
+      // never cause wrong-role redirects after an admin promotes a user.
+      // Use token.id if available, otherwise fall back to token.sub (Google sets sub = user.id).
+      const dbUserId = (token.id as string | undefined) || token.sub
+      if (dbUserId) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: dbUserId },
+            select: { id: true, role: true },
+          })
+          if (dbUser) {
+            token.id = dbUser.id
+            token.role = dbUser.role
+          }
+        } catch {
+          // DB unavailable — keep whatever is in the token
+        }
+      }
+
       return token
     },
     async session({ session, token }) {
@@ -74,9 +93,7 @@ export const authOptions: AuthOptions = {
       return session
     },
     async redirect({ url, baseUrl }) {
-      // Allow relative URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allow same-origin URLs
       if (new URL(url).origin === baseUrl) return url
       return baseUrl
     },
