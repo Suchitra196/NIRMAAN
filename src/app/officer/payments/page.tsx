@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
+import StatusBadge from "@/components/StatusBadge"
 
 interface PaymentRequest {
   id: string
@@ -8,47 +9,82 @@ interface PaymentRequest {
   description: string
   status: "PENDING" | "APPROVED" | "REJECTED"
   officerNote: string | null
+  proofImages: string[]
   createdAt: string
-  project: { id: string; name: string }
+  project: { id: string; name: string; budgetPlanned: number; budgetActual: number; tenderAmount: number }
   contractor: { id: string; name: string | null; email: string | null }
   task: { id: string; title: string } | null
 }
 
+interface Project {
+  id: string
+  name: string
+  status: "ONGOING" | "DELAYED" | "COMPLETED"
+  budgetPlanned: number
+  budgetActual: number
+  tenderAmount: number
+  contractor?: { id: string; name: string | null; email: string | null }
+  installments: Array<{
+    id: string; amount: number; datePaid: string; description: string | null
+  }>
+}
+
+const CHECKLIST = [
+  "Physical verification report uploaded",
+  "Vendor tax compliance verified",
+  "Site photographs from Geo-Tag app attached",
+]
+
 function PaymentStatusBadge({ status }: { status: "PENDING" | "APPROVED" | "REJECTED" }) {
-  if (status === "APPROVED") {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-tertiary-container/10 text-on-tertiary-container border border-tertiary-container/20">
-        Approved
-      </span>
-    )
-  }
-  if (status === "REJECTED") {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-error/10 text-error border border-error/20">
-        Rejected
-      </span>
-    )
+  const map = {
+    PENDING: "bg-secondary-container/20 text-on-secondary-container border border-secondary-container/30",
+    APPROVED: "bg-on-tertiary-container/10 text-on-tertiary-container border border-on-tertiary-container/20",
+    REJECTED: "bg-error/10 text-error border border-error/20",
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium bg-surface-container text-on-surface-variant border border-outline-variant">
-      Pending
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${map[status]}`}>
+      {status}
     </span>
   )
 }
 
-export default function OfficerPaymentsPage() {
-  const [requests, setRequests] = useState<PaymentRequest[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<"PENDING" | "ALL">("PENDING")
-  const [actionState, setActionState] = useState<Record<string, { mode: "approve" | "reject" | null; datePaid: string; rejectNote: string }>>({})
-  const [processingId, setProcessingId] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+const formatCurrency = (val: number) => {
+  if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`
+  if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`
+  return `₹${val.toLocaleString("en-IN")}`
+}
 
-  async function loadRequests() {
+export default function OfficerPaymentsPage() {
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedPR, setSelectedPR] = useState<PaymentRequest | null>(null)
+  const [checkedItems, setCheckedItems] = useState<boolean[]>([false, false, false])
+  const [processingId, setProcessingId] = useState<string | null>(null)
+  const [approveDate, setApproveDate] = useState("")
+  const [rejectNote, setRejectNote] = useState("")
+  const [actionMode, setActionMode] = useState<"approve" | "reject" | null>(null)
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null)
+
+  function showToast(msg: string, type: "success" | "error" = "success") {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  async function loadData() {
     setLoading(true)
     try {
-      const res = await fetch("/api/payment-requests")
-      if (res.ok) setRequests(await res.json())
+      const [prRes, projRes] = await Promise.all([
+        fetch("/api/payment-requests"),
+        fetch("/api/projects"),
+      ])
+      if (prRes.ok) {
+        const data: PaymentRequest[] = await prRes.json()
+        setPaymentRequests(data)
+        const firstPending = data.find((r) => r.status === "PENDING")
+        if (firstPending) setSelectedPR(firstPending)
+      }
+      if (projRes.ok) setProjects(await projRes.json())
     } catch (e) {
       console.error(e)
     } finally {
@@ -56,66 +92,47 @@ export default function OfficerPaymentsPage() {
     }
   }
 
-  useEffect(() => { loadRequests() }, [])
+  useEffect(() => { loadData() }, [])
 
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(null), 4000)
-  }
-
-  function getActionState(prId: string) {
-    return actionState[prId] || { mode: null, datePaid: "", rejectNote: "" }
-  }
-
-  function setMode(prId: string, mode: "approve" | "reject" | null) {
-    setActionState((prev) => ({ ...prev, [prId]: { ...getActionState(prId), mode } }))
-  }
-
-  function setDatePaid(prId: string, datePaid: string) {
-    setActionState((prev) => ({ ...prev, [prId]: { ...getActionState(prId), datePaid } }))
-  }
-
-  function setRejectNote(prId: string, rejectNote: string) {
-    setActionState((prev) => ({ ...prev, [prId]: { ...getActionState(prId), rejectNote } }))
-  }
-
-  async function handleAction(prId: string, action: "approve" | "reject") {
-    setProcessingId(prId)
-    const state = getActionState(prId)
+  async function handleAction(id: string, action: "approve" | "reject") {
+    setProcessingId(id)
     try {
-      const res = await fetch(`/api/payment-requests/${prId}`, {
+      const res = await fetch(`/api/payment-requests/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
-          ...(action === "approve" && state.datePaid ? { datePaid: state.datePaid } : {}),
-          ...(action === "reject" && state.rejectNote ? { officerNote: state.rejectNote } : {}),
+          ...(action === "approve" && approveDate ? { datePaid: approveDate } : {}),
+          ...(action === "reject" ? { officerNote: rejectNote } : {}),
         }),
       })
       if (res.ok) {
-        showToast(action === "approve" ? "Payment approved." : "Payment rejected.")
-        await loadRequests()
+        showToast(action === "approve" ? "Payment approved and installment recorded." : "Request rejected.")
+        setActionMode(null)
+        setApproveDate("")
+        setRejectNote("")
+        await loadData()
       } else {
         const data = await res.json()
-        showToast(data.error || "Action failed.")
+        showToast(data.error || "Action failed.", "error")
       }
-    } catch (e) {
-      console.error(e)
-      showToast("Action failed.")
+    } catch {
+      showToast("Network error.", "error")
     } finally {
       setProcessingId(null)
     }
   }
 
-  const formatCurrency = (val: number) => {
-    if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)}Cr`
-    if (val >= 100000) return `₹${(val / 100000).toFixed(2)}L`
-    return `₹${val.toLocaleString("en-IN")}`
-  }
-
-  const displayRequests = activeTab === "PENDING"
-    ? requests.filter((r) => r.status === "PENDING")
-    : requests
+  // Stats
+  const pendingCount = paymentRequests.filter((r) => r.status === "PENDING").length
+  const disbursedToday = projects.reduce((s, p) => {
+    const today = new Date().toDateString()
+    return s + (p.installments || []).filter((i) => new Date(i.datePaid).toDateString() === today).reduce((a, i) => a + i.amount, 0)
+  }, 0)
+  const totalActiveBudget = projects.reduce((s, p) => s + p.budgetPlanned, 0)
+  const totalActual = projects.reduce((s, p) => s + p.budgetActual, 0)
+  const allocationPct = totalActiveBudget > 0 ? Math.round((totalActual / totalActiveBudget) * 100) : 0
+  const auditFlags = paymentRequests.filter((r) => r.status === "PENDING" && r.proofImages?.length === 0).length
 
   if (loading) {
     return (
@@ -126,152 +143,342 @@ export default function OfficerPaymentsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {toast && (
-        <div className="fixed top-20 right-4 z-50 bg-on-background text-background px-4 py-3 rounded shadow-lg text-sm max-w-sm">
-          {toast}
+        <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm max-w-sm flex items-center gap-2 ${
+          toast.type === "success" ? "bg-on-background text-background" : "bg-error text-on-error"
+        }`}>
+          <span className="material-symbols-outlined text-[18px]">{toast.type === "success" ? "check_circle" : "error"}</span>
+          {toast.msg}
         </div>
       )}
 
+      {/* Page header */}
       <div>
-        <h2 className="text-3xl font-bold text-on-background">Payment Requests</h2>
-        <p className="text-on-surface-variant mt-1">Review and approve contractor payment requests</p>
+        <h1 className="text-3xl font-bold text-on-background">Manage Payments</h1>
+        <p className="text-on-surface-variant mt-1">Review contractor payment requests and disburse installments</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-outline-variant">
-        {(["PENDING", "ALL"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === tab
-                ? "border-primary-container text-primary-container"
-                : "border-transparent text-on-surface-variant hover:text-on-background"
-            }`}
-          >
-            {tab === "PENDING" ? `Pending (${requests.filter((r) => r.status === "PENDING").length})` : `All (${requests.length})`}
-          </button>
-        ))}
-      </div>
-
-      {displayRequests.length === 0 ? (
-        <div className="bg-surface border border-outline-variant rounded-lg p-12 text-center text-on-surface-variant">
-          <span className="material-symbols-outlined text-4xl mb-2 block">payments</span>
-          <p>No {activeTab === "PENDING" ? "pending " : ""}payment requests.</p>
-        </div>
-      ) : (
-        <div className="bg-surface border border-outline-variant rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-surface-container-low border-b border-outline-variant">
-                <tr>
-                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Project</th>
-                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Contractor</th>
-                  <th className="p-4 text-sm font-semibold text-on-surface-variant text-right">Amount</th>
-                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Description</th>
-                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Status</th>
-                  <th className="p-4 text-sm font-semibold text-on-surface-variant">Date</th>
-                  {activeTab === "PENDING" && (
-                    <th className="p-4 text-sm font-semibold text-on-surface-variant">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {displayRequests.map((pr) => {
-                  const state = getActionState(pr.id)
-                  return (
-                    <>
-                      <tr key={pr.id} className="border-b border-outline-variant/50 hover:bg-surface-container-lowest transition-colors">
-                        <td className="p-4 font-medium text-on-background max-w-[140px] truncate">{pr.project.name}</td>
-                        <td className="p-4 text-on-surface-variant text-sm">{pr.contractor.name || pr.contractor.email}</td>
-                        <td className="p-4 text-right font-medium text-primary-container">{formatCurrency(pr.amount)}</td>
-                        <td className="p-4 text-on-surface-variant text-sm max-w-[160px] truncate">{pr.description}</td>
-                        <td className="p-4"><PaymentStatusBadge status={pr.status} /></td>
-                        <td className="p-4 text-sm text-on-surface-variant">{new Date(pr.createdAt).toLocaleDateString("en-IN")}</td>
-                        {activeTab === "PENDING" && (
-                          <td className="p-4">
-                            {pr.status === "PENDING" && state.mode === null && (
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => setMode(pr.id, "approve")}
-                                  className="px-2 py-1 bg-on-tertiary-container text-on-primary rounded text-xs font-semibold hover:opacity-90"
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => setMode(pr.id, "reject")}
-                                  className="px-2 py-1 border border-error text-error rounded text-xs font-semibold hover:bg-error/10"
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                      {/* Inline action row */}
-                      {pr.status === "PENDING" && state.mode !== null && (
-                        <tr key={`${pr.id}-action`} className="bg-surface-container-low border-b border-outline-variant/50">
-                          <td colSpan={activeTab === "PENDING" ? 7 : 6} className="px-4 py-3">
-                            {state.mode === "approve" && (
-                              <div className="flex items-end gap-2 flex-wrap">
-                                <div>
-                                  <label className="block text-xs text-on-surface-variant mb-1">Date Paid</label>
-                                  <input
-                                    type="date"
-                                    value={state.datePaid}
-                                    onChange={(e) => setDatePaid(pr.id, e.target.value)}
-                                    className="p-1.5 border border-outline-variant rounded text-sm focus:border-primary-container focus:outline-none bg-surface"
-                                  />
-                                </div>
-                                <button
-                                  onClick={() => handleAction(pr.id, "approve")}
-                                  disabled={processingId === pr.id}
-                                  className="px-3 py-1.5 bg-on-tertiary-container text-on-primary rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-                                >
-                                  {processingId === pr.id ? "Processing..." : "Confirm Approve"}
-                                </button>
-                                <button onClick={() => setMode(pr.id, null)} className="px-3 py-1.5 border border-outline-variant rounded text-sm hover:bg-surface-container">
-                                  Cancel
-                                </button>
-                              </div>
-                            )}
-                            {state.mode === "reject" && (
-                              <div className="flex items-end gap-2 flex-wrap">
-                                <div className="flex-1 min-w-[200px]">
-                                  <label className="block text-xs text-on-surface-variant mb-1">Reason</label>
-                                  <input
-                                    type="text"
-                                    value={state.rejectNote}
-                                    onChange={(e) => setRejectNote(pr.id, e.target.value)}
-                                    placeholder="Optional reason..."
-                                    className="w-full p-1.5 border border-outline-variant rounded text-sm focus:outline-none bg-surface"
-                                  />
-                                </div>
-                                <button
-                                  onClick={() => handleAction(pr.id, "reject")}
-                                  disabled={processingId === pr.id}
-                                  className="px-3 py-1.5 bg-error text-on-error rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-                                >
-                                  {processingId === pr.id ? "Processing..." : "Confirm Reject"}
-                                </button>
-                                <button onClick={() => setMode(pr.id, null)} className="px-3 py-1.5 border border-outline-variant rounded text-sm hover:bg-surface-container">
-                                  Cancel
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  )
-                })}
-              </tbody>
-            </table>
+      {/* 4 Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wide mb-2">Pending Installments</p>
+          <p className="text-4xl font-bold text-on-background">{pendingCount}</p>
+          <div className="flex items-center gap-1 mt-2 text-xs text-secondary-container">
+            <span className="material-symbols-outlined text-[14px]">schedule</span>
+            Awaiting Review
           </div>
         </div>
-      )}
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wide mb-2">Disbursed Today</p>
+          <p className="text-4xl font-bold text-on-tertiary-container">{formatCurrency(disbursedToday)}</p>
+          <div className="flex items-center gap-1 mt-2 text-xs text-on-tertiary-container">
+            <span className="material-symbols-outlined text-[14px]">trending_up</span>
+            {disbursedToday > 0 ? "Payments processed" : "No payments today"}
+          </div>
+        </div>
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wide mb-2">Total Active Budget</p>
+          <p className="text-4xl font-bold text-primary-container">{formatCurrency(totalActiveBudget)}</p>
+          <div className="flex items-center gap-1 mt-2 text-xs text-on-surface-variant">
+            <span className="material-symbols-outlined text-[14px]">pie_chart</span>
+            {allocationPct}% Allocated
+          </div>
+        </div>
+        <div className="bg-surface border border-outline-variant rounded-xl p-4">
+          <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wide mb-2">Audit Flags</p>
+          <p className="text-4xl font-bold text-error">{String(auditFlags).padStart(2, "0")}</p>
+          <div className="flex items-center gap-1 mt-2 text-xs text-error">
+            <span className="material-symbols-outlined text-[14px]">warning</span>
+            {auditFlags > 0 ? "Action Required" : "All clear"}
+          </div>
+        </div>
+      </div>
+
+      {/* Main two-column layout */}
+      <div className="flex flex-col xl:flex-row gap-6">
+        {/* Left — Projects Financial Overview */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-outline-variant">
+              <h2 className="text-lg font-bold text-on-background">Active Projects Financial Overview</h2>
+              <button className="flex items-center gap-1 text-sm text-primary-container hover:underline font-medium">
+                View All <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </button>
+            </div>
+            {projects.length === 0 ? (
+              <div className="p-12 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-4xl mb-2 block">account_tree</span>
+                <p>No projects assigned.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-surface-container-low">
+                    <tr>
+                      <th className="p-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wide">Project ID</th>
+                      <th className="p-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wide">Project Title</th>
+                      <th className="p-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wide text-right">Total Budget</th>
+                      <th className="p-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wide text-right">Paid</th>
+                      <th className="p-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wide">Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/50">
+                    {projects.map((p, idx) => {
+                      const pct = p.budgetPlanned > 0 ? Math.min(100, (p.budgetActual / p.budgetPlanned) * 100) : 0
+                      const isSelected = selectedPR?.project?.id === p.id
+                      return (
+                        <tr
+                          key={p.id}
+                          onClick={() => {
+                            const pr = paymentRequests.find((r) => r.project?.id === p.id && r.status === "PENDING")
+                            if (pr) { setSelectedPR(pr); setActionMode(null) }
+                          }}
+                          className={`hover:bg-surface-container-lowest transition-colors cursor-pointer ${isSelected ? "bg-primary-container/5" : ""}`}
+                        >
+                          <td className="p-3 text-sm font-mono text-on-surface-variant">#PRJ-{String(idx + 1001)}</td>
+                          <td className="p-3">
+                            <p className="font-semibold text-sm text-on-background">{p.name}</p>
+                            {p.contractor && (
+                              <p className="text-xs text-on-surface-variant mt-0.5">
+                                Contractor: {p.contractor.name || p.contractor.email}
+                              </p>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-medium text-on-background text-sm">{formatCurrency(p.budgetPlanned)}</td>
+                          <td className="p-3 text-right font-bold text-on-tertiary-container text-sm">{formatCurrency(p.budgetActual)}</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2 min-w-[100px]">
+                              <div className="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${pct >= 80 ? "bg-on-tertiary-container" : pct >= 40 ? "bg-secondary-container" : "bg-error/50"}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-on-surface-variant whitespace-nowrap">{pct.toFixed(0)}% Disbursed</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Pending payment requests table */}
+          {paymentRequests.length > 0 && (
+            <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden mt-4">
+              <div className="p-5 border-b border-outline-variant">
+                <h2 className="text-lg font-bold text-on-background">
+                  Payment Requests
+                  {pendingCount > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded text-xs font-bold">{pendingCount} Pending</span>
+                  )}
+                </h2>
+              </div>
+              <div className="divide-y divide-outline-variant/50">
+                {paymentRequests.map((pr) => (
+                  <div
+                    key={pr.id}
+                    onClick={() => { setSelectedPR(pr); setActionMode(null) }}
+                    className={`p-4 flex items-start gap-4 cursor-pointer hover:bg-surface-container-lowest transition-colors ${selectedPR?.id === pr.id ? "bg-primary-container/5 border-l-2 border-primary-container" : ""}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-sm text-on-background">{pr.project?.name}</p>
+                        <PaymentStatusBadge status={pr.status} />
+                      </div>
+                      <p className="text-xs text-on-surface-variant mt-0.5 truncate">{pr.description}</p>
+                      <p className="text-xs text-on-surface-variant mt-0.5">
+                        {pr.contractor?.name || pr.contractor?.email} • {new Date(pr.createdAt).toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
+                    <p className="font-bold text-primary-container text-sm whitespace-nowrap">{formatCurrency(pr.amount)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right — Detail panel */}
+        {selectedPR && (
+          <div className="xl:w-80 space-y-4">
+            {/* Current Review */}
+            <div className="bg-primary text-on-primary rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 pt-5 pb-2">
+                <div>
+                  <p className="text-xs text-on-primary/60 uppercase tracking-wide">Current Review</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    Installment #{paymentRequests.indexOf(selectedPR) + 1 < 10 ? `0${paymentRequests.indexOf(selectedPR) + 1}` : paymentRequests.indexOf(selectedPR) + 1}
+                  </h3>
+                </div>
+                <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase ${
+                  selectedPR.status === "PENDING" ? "bg-secondary-container text-on-secondary-container" :
+                  selectedPR.status === "APPROVED" ? "bg-on-tertiary-container/20 text-on-primary" :
+                  "bg-error/20 text-on-primary"
+                }`}>
+                  {selectedPR.status === "PENDING" ? "Pending Approval" : selectedPR.status}
+                </span>
+              </div>
+              <div className="px-5 pb-5">
+                <div className="grid grid-cols-2 gap-4 mt-3">
+                  <div>
+                    <p className="text-xs text-on-primary/60">Amount Requested</p>
+                    <p className="font-bold text-lg">{formatCurrency(selectedPR.amount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-on-primary/60">Due Date</p>
+                    <p className="font-bold text-sm">{new Date(selectedPR.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Project detail */}
+            <div className="bg-surface border border-outline-variant rounded-xl p-4">
+              <div className="flex items-center gap-1 mb-2">
+                <span className="material-symbols-outlined text-[16px] text-on-surface-variant">info</span>
+                <p className="text-sm font-semibold text-on-background">{selectedPR.project?.name} Details</p>
+              </div>
+              <p className="text-sm text-on-surface-variant">{selectedPR.description}</p>
+              {selectedPR.task && (
+                <p className="text-xs text-on-surface-variant mt-1">Task: {selectedPR.task.title}</p>
+              )}
+              <p className="text-xs text-on-surface-variant mt-1">
+                Contractor: {selectedPR.contractor?.name || selectedPR.contractor?.email}
+              </p>
+            </div>
+
+            {/* Proof images */}
+            {selectedPR.proofImages?.length > 0 && (
+              <div className="bg-surface border border-outline-variant rounded-xl p-4">
+                <p className="text-sm font-semibold text-on-background mb-3">Proof Images ({selectedPR.proofImages.length})</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedPR.proofImages.map((img, idx) => (
+                    <a key={idx} href={img} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img} alt={`Proof ${idx + 1}`} className="w-full h-16 object-cover rounded-lg border border-outline-variant hover:opacity-80 transition-opacity" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Verification Checklist */}
+            <div className="bg-surface border border-outline-variant rounded-xl p-4">
+              <p className="text-sm font-semibold text-on-background mb-3">Verification Checklist</p>
+              <div className="space-y-2">
+                {CHECKLIST.map((item, idx) => (
+                  <label key={idx} className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={checkedItems[idx]}
+                      onChange={(e) => {
+                        const next = [...checkedItems]
+                        next[idx] = e.target.checked
+                        setCheckedItems(next)
+                      }}
+                      className="mt-0.5 w-4 h-4 rounded border-outline-variant accent-primary-container cursor-pointer"
+                    />
+                    <span className="text-sm text-on-surface group-hover:text-on-background transition-colors">{item}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Approve / Reject actions */}
+            {selectedPR.status === "PENDING" && (
+              <div className="space-y-2">
+                {actionMode === null && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setActionMode("approve")}
+                      className="py-2.5 bg-on-tertiary-container text-on-primary rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => setActionMode("reject")}
+                      className="py-2.5 border-2 border-error text-error rounded-lg font-semibold text-sm hover:bg-error/5 transition-colors"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+
+                {actionMode === "approve" && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-on-surface-variant mb-1">Payment Date</label>
+                      <input
+                        type="date"
+                        value={approveDate}
+                        onChange={(e) => setApproveDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:border-primary-container focus:outline-none bg-surface"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => setActionMode(null)} className="py-2 border border-outline-variant rounded-lg text-sm hover:bg-surface-container-low">Cancel</button>
+                      <button
+                        onClick={() => handleAction(selectedPR.id, "approve")}
+                        disabled={processingId === selectedPR.id}
+                        className="py-2 bg-on-tertiary-container text-on-primary rounded-lg font-semibold text-sm disabled:opacity-50"
+                      >
+                        {processingId === selectedPR.id ? "..." : "Confirm"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {actionMode === "reject" && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-on-surface-variant mb-1">Reason (optional)</label>
+                      <input
+                        type="text"
+                        value={rejectNote}
+                        onChange={(e) => setRejectNote(e.target.value)}
+                        placeholder="Reason for rejection..."
+                        className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:border-error focus:outline-none bg-surface"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => setActionMode(null)} className="py-2 border border-outline-variant rounded-lg text-sm hover:bg-surface-container-low">Cancel</button>
+                      <button
+                        onClick={() => handleAction(selectedPR.id, "reject")}
+                        disabled={processingId === selectedPR.id}
+                        className="py-2 bg-error text-on-error rounded-lg font-semibold text-sm disabled:opacity-50"
+                      >
+                        {processingId === selectedPR.id ? "..." : "Reject"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Recent History */}
+            <div className="bg-surface border border-outline-variant rounded-xl p-4">
+              <p className="text-sm font-semibold text-on-background mb-3">Recent History</p>
+              {projects
+                .find((p) => p.id === selectedPR.project?.id)
+                ?.installments?.slice(0, 3)
+                .map((inst) => (
+                  <div key={inst.id} className="flex justify-between items-center py-2 border-b border-outline-variant/50 last:border-0">
+                    <div>
+                      <p className="text-xs font-medium text-on-background">{inst.description || "Installment"}</p>
+                      <p className="text-xs text-on-surface-variant">{new Date(inst.datePaid).toLocaleDateString("en-IN")}</p>
+                    </div>
+                    <p className="text-xs font-bold text-on-tertiary-container">{formatCurrency(inst.amount)}</p>
+                  </div>
+                )) || <p className="text-xs text-on-surface-variant">No history.</p>}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import StatusBadge from "@/components/StatusBadge"
 
 interface Project {
@@ -126,12 +127,12 @@ export default function AdminProjectsPage() {
           <h2 className="text-3xl font-bold text-on-background">Projects</h2>
           <p className="text-on-surface-variant mt-1">Manage all government projects</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-xs bg-primary-container text-on-primary px-md py-2 rounded font-title-md font-semibold hover:opacity-90 transition-opacity"
+        <Link
+          href="/admin/projects/new"
+          className="flex items-center gap-xs bg-primary text-on-primary px-md py-2 rounded-lg font-title-md font-semibold hover:bg-primary/90 transition-colors"
         >
           <span className="material-symbols-outlined">add</span> New Project
-        </button>
+        </Link>
       </div>
 
       {loading ? (

@@ -10,6 +10,7 @@ import MobileNav from "@/components/MobileNav"
 const contractorNavItems = [
   { label: "Dashboard", href: "/contractor", icon: "dashboard" },
   { label: "Projects", href: "/contractor/projects", icon: "account_tree" },
+  { label: "Workspace", href: "/contractor/workspace", icon: "construction" },
   { label: "Finance", href: "/contractor/finance", icon: "payments" },
   { label: "Settings", href: "/contractor/settings", icon: "settings" },
 ]
