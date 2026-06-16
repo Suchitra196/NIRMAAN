@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 
 interface LoginRequest {
   id: string
@@ -135,8 +135,8 @@ export default function AdminRequestsPage() {
               </thead>
               <tbody className="divide-y divide-outline-variant/50">
                 {requests.map((req) => (
-                  <>
-                    <tr key={req.id} className="hover:bg-surface-container-lowest transition-colors">
+                  <React.Fragment key={req.id}>
+                    <tr className="hover:bg-surface-container-lowest transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center flex-shrink-0">
@@ -218,7 +218,7 @@ export default function AdminRequestsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

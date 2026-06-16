@@ -199,9 +199,9 @@ export default function AdminProjectsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-outline-variant">
-            <div className="flex justify-between items-center p-6 border-b border-outline-variant sticky top-0 bg-surface z-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto p-4 py-8">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg border border-outline-variant my-auto">
+            <div className="flex justify-between items-center p-6 border-b border-outline-variant bg-surface rounded-t-xl">
               <h3 className="text-xl font-bold text-on-background">
                 {editProject ? "Edit Project" : "New Project"}
               </h3>
