@@ -11,7 +11,6 @@ const officerNavItems = [
   { label: "Dashboard", href: "/officer", icon: "dashboard" },
   { label: "Projects", href: "/officer/projects", icon: "account_tree" },
   { label: "Finance", href: "/officer/finance", icon: "payments" },
-  { label: "Payments", href: "/officer/payments", icon: "payments" },
   { label: "Settings", href: "/officer/settings", icon: "settings" },
 ]
 
