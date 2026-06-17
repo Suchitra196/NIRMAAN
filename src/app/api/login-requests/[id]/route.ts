@@ -36,7 +36,7 @@ export async function PUT(
     }
 
     if (action === "approve") {
-      // Create a new User from the LoginRequest
+      // Create a new User from the LoginRequest with status=ACTIVE
       const newUser = await prisma.user.create({
         data: {
           name: loginRequest.name,
@@ -44,6 +44,7 @@ export async function PUT(
           phone: loginRequest.phone,
           password: loginRequest.password,
           role: loginRequest.requestedRole,
+          status: "ACTIVE",
           profileImage: null,
         },
       })

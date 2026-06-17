@@ -12,6 +12,31 @@ enum Role {
   CONTRACTOR
 }
 
+enum UserStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+}
+
+enum Department {
+  DISTRICT_ADMINISTRATION
+  AGRICULTURE
+  SOCIAL_WELFARE
+  WORKS_CONSTRUCTION
+  SOIL_WATER_CONSERVATION
+  RURAL_WATER_SUPPLY
+  HEALTH
+  EDUCATION_PRIMARY
+  EDUCATION_SECONDARY
+  ACCOUNTS_FINANCE
+  WATER_SUPPLY_SANITATION
+  GRAM_PANCHAYAT
+  WOMEN_CHILD_DEVELOPMENT
+  GENERAL_ADMINISTRATION
+  NREGA
+  NONE
+}
+
 enum LoginRequestStatus {
   PENDING
   APPROVED
@@ -53,15 +78,23 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?     @unique
   emailVerified DateTime?
   image         String?
-  role          Role      @default(OFFICER)
+  role          Role        @default(OFFICER)
   profileImage  String?
   password      String?
   phone         String?
+
+  // New hierarchy / approval fields
+  status        UserStatus  @default(PENDING_APPROVAL)
+  designation   String?
+  department    Department  @default(NONE)
+  hierarchyLevel Int        @default(99)
+  isSuperAdmin  Boolean     @default(false)
+  isDeptAdmin   Boolean     @default(false)
 
   accounts      Account[]
   sessions      Session[]

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
+import { Department, UserStatus } from "@prisma/client"
 
 // GET user by ID
 export async function GET(
@@ -24,6 +25,12 @@ export async function GET(
         email: true,
         image: true,
         role: true,
+        status: true,
+        designation: true,
+        department: true,
+        hierarchyLevel: true,
+        isDeptAdmin: true,
+        isSuperAdmin: true,
         managedProjects: true,
         contractedProjects: true,
       },
@@ -58,7 +65,16 @@ export async function PUT(
 
     const { id } = await params
     const body = await req.json()
-    const { role, name } = body
+    const {
+      role,
+      name,
+      status,
+      designation,
+      department,
+      hierarchyLevel,
+      isDeptAdmin,
+      isSuperAdmin,
+    } = body
 
     const user = await prisma.user.findUnique({ where: { id } })
 
@@ -69,8 +85,14 @@ export async function PUT(
     const updated = await prisma.user.update({
       where: { id },
       data: {
-        ...(role && { role }),
-        ...(name && { name }),
+        ...(role !== undefined && { role }),
+        ...(name !== undefined && { name }),
+        ...(status !== undefined && { status: status as UserStatus }),
+        ...(designation !== undefined && { designation }),
+        ...(department !== undefined && { department: department as Department }),
+        ...(hierarchyLevel !== undefined && { hierarchyLevel: Number(hierarchyLevel) }),
+        ...(isDeptAdmin !== undefined && { isDeptAdmin: Boolean(isDeptAdmin) }),
+        ...(isSuperAdmin !== undefined && { isSuperAdmin: Boolean(isSuperAdmin) }),
       },
       select: {
         id: true,
@@ -78,6 +100,12 @@ export async function PUT(
         email: true,
         image: true,
         role: true,
+        status: true,
+        designation: true,
+        department: true,
+        hierarchyLevel: true,
+        isDeptAdmin: true,
+        isSuperAdmin: true,
       },
     })
 

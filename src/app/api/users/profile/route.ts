@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
+import { DESIGNATION_HIERARCHY } from "@/lib/hierarchy"
+import { Department } from "@prisma/client"
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024 // 2MB in bytes
 
@@ -29,6 +31,12 @@ export async function GET() {
         role: true,
         image: true,
         profileImage: true,
+        status: true,
+        designation: true,
+        department: true,
+        hierarchyLevel: true,
+        isDeptAdmin: true,
+        isSuperAdmin: true,
       },
     })
 
@@ -43,7 +51,7 @@ export async function GET() {
   }
 }
 
-// PUT update profile image
+// PUT update profile (image, name, phone, designation)
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -58,32 +66,57 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { profileImage } = body
+    const { profileImage, name, phone, designation, department } = body
 
-    // null means "clear the profile image" (revert to Google photo)
-    if (profileImage !== null) {
-      if (typeof profileImage !== "string") {
-        return NextResponse.json(
-          { error: "profileImage must be a string or null" },
-          { status: 400 }
-        )
-      }
+    const updateData: Record<string, unknown> = {}
 
-      if (!profileImage.startsWith("data:image/")) {
-        return NextResponse.json(
-          { error: "profileImage must be a valid image data URL" },
-          { status: 400 }
-        )
-      }
+    // Handle profileImage update
+    if (profileImage !== undefined) {
+      if (profileImage !== null) {
+        if (typeof profileImage !== "string") {
+          return NextResponse.json(
+            { error: "profileImage must be a string or null" },
+            { status: 400 }
+          )
+        }
 
-      // Check size: base64 string length * 0.75 ≈ byte size
-      const byteSize = Math.ceil((profileImage.length * 3) / 4)
-      if (byteSize > MAX_IMAGE_SIZE) {
-        return NextResponse.json(
-          { error: "Image must be 2MB or smaller" },
-          { status: 400 }
-        )
+        if (!profileImage.startsWith("data:image/")) {
+          return NextResponse.json(
+            { error: "profileImage must be a valid image data URL" },
+            { status: 400 }
+          )
+        }
+
+        const byteSize = Math.ceil((profileImage.length * 3) / 4)
+        if (byteSize > MAX_IMAGE_SIZE) {
+          return NextResponse.json(
+            { error: "Image must be 2MB or smaller" },
+            { status: 400 }
+          )
+        }
       }
+      updateData.profileImage = profileImage ?? null
+    }
+
+    if (name !== undefined) updateData.name = name
+    if (phone !== undefined) updateData.phone = phone
+
+    // Handle designation — auto-derive department and hierarchyLevel if not explicitly provided
+    if (designation !== undefined) {
+      updateData.designation = designation
+      const info = designation ? DESIGNATION_HIERARCHY[designation] : null
+      if (info) {
+        updateData.hierarchyLevel = info.level
+        // department can be overridden by explicit param
+        updateData.department = (department as Department) || (info.department as Department)
+        // Mark isSuperAdmin for level 1-2, isDeptAdmin for level 3-5
+        updateData.isSuperAdmin = info.level <= 2
+        updateData.isDeptAdmin = info.level >= 3 && info.level <= 5
+      }
+    }
+
+    if (department !== undefined && designation === undefined) {
+      updateData.department = department as Department
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
@@ -93,18 +126,22 @@ export async function PUT(req: NextRequest) {
 
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { profileImage: profileImage ?? null },
+      data: updateData,
       select: {
         id: true,
         name: true,
         email: true,
+        phone: true,
         profileImage: true,
+        designation: true,
+        department: true,
+        hierarchyLevel: true,
       },
     })
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error("Error updating profile image:", error)
-    return NextResponse.json({ error: "Failed to update profile image" }, { status: 500 })
+    console.error("Error updating profile:", error)
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })
   }
 }

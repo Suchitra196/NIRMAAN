@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 import Sidebar from "@/components/Sidebar"
 import TopBar from "@/components/TopBar"
@@ -17,18 +17,38 @@ const officerNavItems = [
 export default function OfficerLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login")
+      return
     }
-    if (status === "authenticated" && session?.user?.role !== "OFFICER") {
+
+    if (status === "authenticated") {
+      const userStatus = (session?.user as any)?.status
       const role = session?.user?.role
-      if (role === "ADMIN") router.replace("/admin")
-      else if (role === "CONTRACTOR") router.replace("/contractor")
-      else router.replace("/login")
+
+      if (userStatus === "PENDING_APPROVAL") {
+        router.replace("/pending-approval")
+        return
+      }
+
+      if (role !== "OFFICER") {
+        if (role === "ADMIN") router.replace("/admin")
+        else if (role === "CONTRACTOR") router.replace("/contractor")
+        else router.replace("/login")
+        return
+      }
+
+      // If officer has no designation and isn't already on /setup, redirect to setup
+      const designation = (session?.user as any)?.designation
+      if (!designation && pathname !== "/setup") {
+        router.replace("/setup")
+        return
+      }
     }
-  }, [status, session, router])
+  }, [status, session, router, pathname])
 
   if (status === "loading") {
     return (

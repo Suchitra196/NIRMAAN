@@ -26,17 +26,27 @@ export async function GET(req: NextRequest) {
     }
 
     const roleFilter = req.nextUrl.searchParams.get("role") as Role | null
+    const statusFilter = req.nextUrl.searchParams.get("status")
 
     const users = await prisma.user.findMany({
-      where: roleFilter ? { role: roleFilter } : {},
+      where: {
+        ...(roleFilter ? { role: roleFilter } : {}),
+        ...(statusFilter ? { status: statusFilter as any } : {}),
+      },
       select: {
         id: true,
         name: true,
         email: true,
         image: true,
         role: true,
-        managedProjects: true,
-        contractedProjects: true,
+        status: true,
+        designation: true,
+        department: true,
+        hierarchyLevel: true,
+        isDeptAdmin: true,
+        isSuperAdmin: true,
+        managedProjects: { select: { id: true } },
+        contractedProjects: { select: { id: true } },
       },
     })
 
@@ -72,6 +82,9 @@ export async function POST(req: NextRequest) {
         email: true,
         image: true,
         role: true,
+        status: true,
+        designation: true,
+        department: true,
       },
     })
 

@@ -10,8 +10,9 @@ import type { NavItem } from "@/components/Sidebar"
 
 const baseNavItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: "dashboard" },
-  { label: "Projects", href: "/admin/projects", icon: "account_tree" },
+  { label: "Projects", href: "/admin/projects", icon: "folder_open" },
   { label: "Officers", href: "/admin/officers", icon: "badge" },
+  { label: "Hierarchy", href: "/admin/hierarchy", icon: "account_tree" },
   { label: "Finance", href: "/admin/finance", icon: "payments" },
   { label: "Reports", href: "/admin/reports", icon: "description" },
   { label: "Requests", href: "/admin/requests", icon: "pending_actions" },

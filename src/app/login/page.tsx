@@ -74,7 +74,17 @@ export default function LoginPage() {
   // Redirect already-authenticated users to their dashboard
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
+      const userStatus = (session.user as any).status as string | undefined
       const role = (session.user as any).role as string | undefined
+
+      if (userStatus === "PENDING_APPROVAL") {
+        router.replace("/pending-approval")
+        return
+      }
+      if (userStatus === "SUSPENDED") {
+        setCredError("Your account has been suspended. Please contact the administrator.")
+        return
+      }
       if (role === "ADMIN") router.replace("/admin")
       else if (role === "OFFICER") router.replace("/officer")
       else if (role === "CONTRACTOR") router.replace("/contractor")
@@ -91,7 +101,7 @@ export default function LoginPage() {
   }
 
   const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl: "/admin" })
+    signIn("google", { callbackUrl: "/login" })
   }
 
   const handleCredentialsSignIn = async (e: React.FormEvent) => {
