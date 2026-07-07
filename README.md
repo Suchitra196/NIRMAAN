@@ -1,205 +1,98 @@
-# NIRMAAN — Government Project & Operations Management System (GPOMS)
+NIRMAAN — Government Projects Finance Management System
 
-A web application for managing government infrastructure projects, tracking financial disbursements, and coordinating between administrative officers and contractors.
+NIRMAAN is a full-stack finance management system built for tracking and managing government project funding, expenditure, and reporting. It grew out of an earlier academic prototype (GPOMS) into a production-style application with a relational backend, a secured REST API, interactive dashboards, and an AI-powered chatbot for natural-language data queries.
 
----
+Demo Link
 
-## What's Built So Far
 
-### Authentication & Authorization
-- Google OAuth sign-in via **NextAuth.js**
-- JWT-based session management
-- Role-based access control with three roles: **Admin**, **Officer**, and **Contractor**
-- Role is stored in the database and propagated into the JWT session token
-- Middleware helpers (`withAuth`, `withRole`) for protecting API routes
-- Login page with role selector UI (Admin / Officer / Contractor)
 
-### Database (PostgreSQL + Prisma)
-Full schema defined and ready to migrate:
+Table of Contents
 
-| Model | Description |
-|-------|-------------|
-| `User` | Stores user profile and role; linked to NextAuth accounts/sessions |
-| `Account` / `Session` / `VerificationToken` | NextAuth standard models |
-| `Project` | Core entity — tracks name, status, budget (planned vs actual), tender amount, assigned officer and contractor |
-| `Task` | Work items linked to a project with status (`PENDING`, `IN_PROGRESS`, `COMPLETED`) and optional due date |
-| `Installment` | Payment records against a project; automatically rolls up into `budgetActual` on the project |
 
-Enums: `Role` (ADMIN, OFFICER, CONTRACTOR), `ProjectStatus` (ONGOING, DELAYED, COMPLETED), `TaskStatus`.
+Business Understanding
+Data Understanding
+Screenshots of Visualizations/Results
+Technologies
+Setup
+Approach
+Status
+Credits
 
-### REST API (Next.js Route Handlers)
-All routes require an authenticated session. Role restrictions are enforced per route.
 
-#### Projects — `/api/projects`
-| Method | Endpoint | Who can access |
-|--------|----------|---------------|
-| GET | `/api/projects` | All roles (filtered by role — admin sees all, officer/contractor see their own) |
-| POST | `/api/projects` | Admin, Officer |
-| GET | `/api/projects/[id]` | All authenticated users |
-| PUT | `/api/projects/[id]` | Admin, or the Officer assigned to the project |
-| DELETE | `/api/projects/[id]` | Admin only |
+Business Understanding
 
-#### Tasks — `/api/tasks`
-| Method | Endpoint | Notes |
-|--------|----------|-------|
-| GET | `/api/tasks?projectId=...` | Requires `projectId` query param |
-| POST | `/api/tasks` | Creates a task under a project |
-| GET | `/api/tasks/[id]` | |
-| PUT | `/api/tasks/[id]` | Update title, description, status, dueDate |
-| DELETE | `/api/tasks/[id]` | |
+Government-funded projects typically span multiple departments, contractors, and disbursement stages, which makes it hard to track fund allocation, utilization, and delays using spreadsheets or siloed systems. NIRMAAN was built to give administrators a single system to record project details, monitor budget allocation versus actual spend, and generate reports — while also letting non-technical stakeholders ask questions about the data in plain language instead of writing SQL.
 
-#### Installments — `/api/installments`
-| Method | Endpoint | Notes |
-|--------|----------|-------|
-| GET | `/api/installments?projectId=...` | Requires `projectId` query param |
-| POST | `/api/installments` | Admin / Officer only; auto-updates `budgetActual` on the parent project |
-| GET | `/api/installments/[id]` | |
-| PUT | `/api/installments/[id]` | Admin only; recalculates `budgetActual` |
-| DELETE | `/api/installments/[id]` | Admin only; recalculates `budgetActual` |
+The biggest challenges while building this were designing a schema flexible enough to model real-world project/fund/disbursement relationships without becoming unwieldy, and building a reliable natural-language-to-SQL layer that stays scoped to the actual database schema rather than hallucinating fields or tables.
 
-#### Users — `/api/users`
-| Method | Endpoint | Notes |
-|--------|----------|-------|
-| GET | `/api/users` | Admin only; supports `?role=` filter |
-| POST | `/api/users` | Returns current authenticated user's profile |
-| GET | `/api/users/[id]` | Any authenticated user |
-| PUT | `/api/users/[id]` | Admin only — can update name and role |
-| DELETE | `/api/users/[id]` | Admin only |
+Data Understanding
 
-### UI Pages
-All pages guard against unauthenticated access and redirect to `/login`.
+The system is built around a 12-table MySQL schema modeling entities such as projects, departments, funding sources, disbursements, contractors, and audit/status records, connected through normalized relationships. Data is created and updated directly through the application via the REST API, rather than sourced from an external dataset.
 
-#### `/login`
-- Split-screen layout (branding hero + login panel)
-- Role selector (Admin / Officer / Contractor)
-- Google sign-in button
-- Responsive — collapses to single-column on mobile
+Planned enhancements include richer historical trend analysis across project timelines and expanding the RAG chatbot's context to support more complex, multi-table queries.
 
-#### `/admin`
-- Sidebar navigation (Projects, Officers, Departments, Finance, Reports)
-- Top bar with search, notifications, and user avatar
-- Summary cards: Total Projects, Active Officers, Total Tender Value (currently static placeholder data)
-- Financial overview placeholder (chart area)
-- Recent Projects table with status badges (Ongoing / Completed / Delayed)
+Screenshots of Visualizations/Results
 
-#### `/officer`
-- Sidebar + mobile bottom navigation
-- Profile card showing session user's name and avatar
-- Key stats: Active Projects, Pending Clearances, Budget Utilization (static placeholders)
-- Assigned Projects list with a progress bar
-- Pending Clearances panel with Approve/Review actions (UI only, not wired to API)
+Add screenshots of the React dashboards, project tracking views, and chatbot interface here.
 
-#### `/contractor`
-- Sidebar navigation
-- Contractor Performance Dashboard header
-- Top metrics: Total Disbursed, Pending Installments, Tasks Under Review (static placeholders)
-- Active Contracts list with progress bars
-- Live Task Update form with contract selector, progress description textarea, and file upload drop zone (UI only, not wired to API)
+Technologies
 
----
 
-## What's Not Built Yet
+Backend: Spring Boot, JWT-based authentication, REST API
+Database: MySQL (12-table relational schema)
+Frontend: React, dashboard components for project/fund visualization
+AI/RAG Chatbot: LangChain, FAISS (vector store), Gemini (LLM)
+Natural Language to SQL: Text-to-SQL pipeline scoped to the project schema
+DevOps: Docker, GitHub Actions (CI/CD)
 
-- Dashboards are not wired to the API — all numbers and lists are static placeholder data
-- No real chart/graph library integrated (financial overview is a placeholder div)
-- No file upload backend for contractor evidence submission
-- No department model or department management pages
-- No notifications system (bell icon is present but non-functional)
-- No search functionality (search input exists but is not wired)
-- No report generation
-- Role-based redirect after login (the login page passes a role to the callback URL but the server doesn't enforce it — the role comes from the DB, not the selector)
-- No admin user management UI (only the API exists)
-- No mobile sidebar/drawer (mobile nav is bottom tabs only)
 
----
+Setup
 
-## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript |
-| Auth | NextAuth.js v4 (Google OAuth, JWT sessions) |
-| Database | PostgreSQL |
-| ORM | Prisma 7 with `@prisma/adapter-pg` |
-| Styling | Tailwind CSS v4 |
-| Runtime | Node.js |
+Update the commands below to match the actual repo structure once finalized.
 
----
 
-## Getting Started
 
-### Prerequisites
-- Node.js 18+
-- A PostgreSQL database
-- A Google OAuth app (Client ID + Secret)
+bash# Clone the repository
+git clone https://github.com/Suchitra196/NIRMAAN-gpoms.git
+cd NIRMAAN-gpoms
 
-### Setup
+# Backend setup
+cd backend
+# configure application.properties / .env with MySQL credentials and JWT secret
+./mvnw spring-boot:run
 
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# Frontend setup
+cd ../frontend
+npm install
+npm start
 
-2. **Configure environment variables**
+# Docker (optional, full stack)
+docker-compose up --build
 
-   Copy `.env` and fill in your values:
-   ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/gpoms"
-   NEXTAUTH_URL="http://localhost:3000"
-   NEXTAUTH_SECRET="your-secret-here"
-   GOOGLE_CLIENT_ID="your-google-client-id"
-   GOOGLE_CLIENT_SECRET="your-google-client-secret"
-   ```
+Environment variables you'll likely need to configure:
 
-3. **Run database migrations**
-   ```bash
-   npx prisma migrate dev
-   ```
 
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+MySQL connection string, username, password
+JWT signing secret
+Gemini API key (for the RAG chatbot / text-to-SQL layer)
 
-   Open [http://localhost:3000](http://localhost:3000).
 
-### Other Commands
+Approach
 
-```bash
-npm run build      # Production build
-npm run start      # Start production server
-npm run lint       # Run ESLint
-npx prisma studio  # Open Prisma database browser
-```
 
----
+Schema design — Modeled the 12-table relational structure covering projects, departments, funding sources, disbursements, and contractors, with appropriate foreign key relationships and constraints.
+Backend API — Built a Spring Boot REST API secured with JWT authentication, exposing endpoints for CRUD operations on projects, funds, and disbursements.
+Frontend dashboards — Built React dashboards to visualize project status, budget allocation vs. utilization, and department-level summaries.
+RAG chatbot — Implemented a retrieval-augmented chatbot using LangChain and FAISS for context retrieval, backed by Gemini, allowing users to ask natural-language questions about the data.
+Text-to-SQL — Added a layer that translates natural-language queries into SQL scoped to the project's schema, enabling ad-hoc reporting without writing SQL manually.
+CI/CD — Set up Docker containerization and GitHub Actions workflows for automated builds and deployment.
 
-## Project Structure
 
-```
-gpoms-app/
-├── prisma/
-│   └── schema.prisma          # Database schema
-├── src/
-│   ├── app/
-│   │   ├── admin/page.tsx     # Admin dashboard
-│   │   ├── officer/page.tsx   # Officer dashboard
-│   │   ├── contractor/page.tsx # Contractor dashboard
-│   │   ├── login/page.tsx     # Login page
-│   │   ├── api/
-│   │   │   ├── auth/[...nextauth]/route.ts
-│   │   │   ├── projects/      # CRUD for projects
-│   │   │   ├── tasks/         # CRUD for tasks
-│   │   │   ├── installments/  # CRUD for installments
-│   │   │   └── users/         # User management
-│   │   ├── layout.tsx         # Root layout with SessionProvider
-│   │   └── providers.tsx      # NextAuth SessionProvider wrapper
-│   ├── lib/
-│   │   └── prisma.ts          # Prisma client singleton
-│   ├── middleware/
-│   │   └── auth.ts            # withAuth / withRole helpers
-│   └── types/
-│       └── next-auth.d.ts     # NextAuth type augmentations
-└── package.json
-```
+Status
+
+In progress. Core backend (schema, REST API, JWT auth), frontend dashboards, and the RAG chatbot / text-to-SQL layer are built; ongoing work includes refining the chatbot's query scope and expanding dashboard visualizations.
+
+Credits
+
+Built by Suchitra (Suchi), Computer Engineering, Cummins College of Engineering for Women, Pune.
