@@ -25,7 +25,6 @@ export const authOptions: AuthOptions = {
 
         const identifier = credentials.identifier.trim()
 
-        // Find user by email OR phone
         const user = await prisma.user.findFirst({
           where: {
             OR: [
@@ -39,9 +38,17 @@ export const authOptions: AuthOptions = {
           return null
         }
 
-        // Block suspended users at credentials sign-in
         if (user.status === "SUSPENDED") {
           return null
+        }
+
+        // Auto-activate credential users who were created before the status field was added
+        // (they have PENDING_APPROVAL but have a password set, meaning they were approved)
+        if (user.status === "PENDING_APPROVAL" && user.password) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { status: "ACTIVE" },
+          })
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password)
@@ -65,22 +72,18 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google") {
-        // Check if user already exists in DB (PrismaAdapter may have just created them)
         const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
         if (dbUser && dbUser.status === "SUSPENDED") return false
-        // PENDING_APPROVAL users are allowed through — they'll be redirected to /pending-approval
         return true
       }
       return true
     },
 
-    async jwt({ token, user, trigger }) {
-      // On first sign-in, seed id from the user object
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id
       }
 
-      // ALWAYS re-fetch the role and status from the database
       const dbUserId = (token.id as string | undefined) || token.sub
       if (dbUserId) {
         try {
@@ -90,14 +93,19 @@ export const authOptions: AuthOptions = {
           })
           if (dbUser) {
             token.id = dbUser.id
-            token.status = dbUser.status
             token.designation = dbUser.designation
 
-            if (dbUser.status === "PENDING_APPROVAL") {
+            // ADMIN users are always treated as ACTIVE regardless of status field
+            // This fixes the migration issue where existing admins have PENDING_APPROVAL
+            const effectiveStatus =
+              dbUser.role === "ADMIN" ? "ACTIVE" : dbUser.status
+
+            token.status = effectiveStatus
+
+            if (effectiveStatus === "PENDING_APPROVAL") {
               token.pendingApproval = true
               token.suspended = false
-              // Do NOT set role when pending
-            } else if (dbUser.status === "SUSPENDED") {
+            } else if (effectiveStatus === "SUSPENDED") {
               token.suspended = true
               token.pendingApproval = false
             } else {
@@ -108,7 +116,7 @@ export const authOptions: AuthOptions = {
             }
           }
         } catch {
-          // DB unavailable — keep whatever is in the token
+          // DB unavailable — keep token as-is
         }
       }
 

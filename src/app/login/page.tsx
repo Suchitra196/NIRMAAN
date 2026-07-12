@@ -101,6 +101,7 @@ export default function LoginPage() {
   }
 
   const handleGoogleSignIn = () => {
+    // callbackUrl goes back to /login so the useEffect can redirect based on role/status
     signIn("google", { callbackUrl: "/login" })
   }
 
