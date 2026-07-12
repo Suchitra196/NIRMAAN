@@ -20,37 +20,37 @@ export default function OfficerLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname()
 
   useEffect(() => {
+    if (status === "loading") return
+
     if (status === "unauthenticated") {
       router.push("/login")
       return
     }
 
-    if (status === "authenticated") {
-      const userStatus = (session?.user as any)?.status
-      const role = session?.user?.role
+    // Wait for role to be populated
+    const role = session?.user?.role
+    if (!role) return
 
-      if (userStatus === "PENDING_APPROVAL") {
-        router.replace("/pending-approval")
-        return
-      }
+    const userStatus = (session?.user as any)?.status
 
-      if (role !== "OFFICER") {
-        if (role === "ADMIN") router.replace("/admin")
-        else if (role === "CONTRACTOR") router.replace("/contractor")
-        else router.replace("/login")
-        return
-      }
+    if (userStatus === "PENDING_APPROVAL") {
+      router.replace("/pending-approval")
+      return
+    }
 
-      // If officer has no designation and isn't already on /setup, redirect to setup
+    if (role === "ADMIN") { router.replace("/admin"); return }
+    if (role === "CONTRACTOR") { router.replace("/contractor"); return }
+
+    // Confirmed OFFICER — check setup
+    if (role === "OFFICER") {
       const designation = (session?.user as any)?.designation
-      if (!designation && pathname !== "/setup") {
+      if (!designation && !pathname.startsWith("/setup")) {
         router.replace("/setup")
-        return
       }
     }
   }, [status, session, router, pathname])
 
-  if (status === "loading") {
+  if (status === "loading" || !session?.user?.role) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <span className="material-symbols-outlined animate-spin text-primary-container text-4xl">progress_activity</span>
@@ -58,7 +58,7 @@ export default function OfficerLayout({ children }: { children: React.ReactNode 
     )
   }
 
-  if (status === "unauthenticated" || session?.user?.role !== "OFFICER") {
+  if (session?.user?.role !== "OFFICER") {
     return null
   }
 

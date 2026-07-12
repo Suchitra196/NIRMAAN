@@ -73,35 +73,45 @@ export default function LoginPage() {
 
   // Redirect already-authenticated users to their dashboard
   useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      const userStatus = (session.user as any).status as string | undefined
-      const role = (session.user as any).role as string | undefined
+    if (status !== "authenticated" || !session?.user) return
 
-      if (userStatus === "PENDING_APPROVAL") {
-        router.replace("/pending-approval")
-        return
-      }
-      if (userStatus === "SUSPENDED") {
-        setCredError("Your account has been suspended. Please contact the administrator.")
-        return
-      }
-      if (role === "ADMIN") router.replace("/admin")
-      else if (role === "OFFICER") router.replace("/officer")
-      else if (role === "CONTRACTOR") router.replace("/contractor")
-      else router.replace("/admin")
+    const userStatus = (session.user as any).status as string | undefined
+    const role = (session.user as any).role as string | undefined
+
+    // Don't redirect if status/role haven't been populated in the token yet
+    if (!userStatus && !role) return
+
+    if (userStatus === "PENDING_APPROVAL") {
+      router.replace("/pending-approval")
+      return
     }
+    if (userStatus === "SUSPENDED") {
+      setCredError("Your account has been suspended. Please contact the administrator.")
+      return
+    }
+
+    // Only redirect if we have a definite role
+    if (role === "ADMIN") router.replace("/admin")
+    else if (role === "OFFICER") {
+      // Check if setup is needed (no designation set yet)
+      const designation = (session.user as any).designation
+      if (!designation) router.replace("/setup")
+      else router.replace("/officer")
+    }
+    else if (role === "CONTRACTOR") router.replace("/contractor")
+    // If role is still undefined, stay on login — don't redirect
   }, [status, session, router])
 
   if (status === "loading") {
     return (
       <div className="flex h-screen items-center justify-center bg-surface">
-        <span className="text-on-surface-variant text-sm">Loading...</span>
+        <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
       </div>
     )
   }
 
   const handleGoogleSignIn = () => {
-    // callbackUrl goes back to /login so the useEffect can redirect based on role/status
+    // After Google OAuth, come back to /login where useEffect handles role-based routing
     signIn("google", { callbackUrl: "/login" })
   }
 

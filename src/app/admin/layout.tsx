@@ -25,41 +25,46 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
+    // Only redirect when session state is fully resolved — never during "loading"
+    if (status === "loading") return
+
     if (status === "unauthenticated") {
       router.push("/login")
+      return
     }
-    if (status === "authenticated" && session?.user?.role !== "ADMIN") {
-      const role = session?.user?.role
-      if (role === "OFFICER") router.replace("/officer")
-      else if (role === "CONTRACTOR") router.replace("/contractor")
-      else router.replace("/login")
-    }
+
+    // status === "authenticated" — only redirect if role is explicitly NOT admin
+    // Do NOT redirect if role is undefined (session still hydrating)
+    const role = session?.user?.role
+    if (!role) return
+
+    if (role === "OFFICER") { router.replace("/officer"); return }
+    if (role === "CONTRACTOR") { router.replace("/contractor"); return }
+    // Any other non-ADMIN role — send to login, but only if we're sure
+    if (role !== "ADMIN") { router.replace("/login"); return }
   }, [status, session, router])
 
-  // Fetch pending requests count
+  // Fetch pending requests count (only when confirmed ADMIN)
   useEffect(() => {
+    if (status !== "authenticated" || session?.user?.role !== "ADMIN") return
     async function fetchPendingCount() {
-      if (status !== "authenticated" || session?.user?.role !== "ADMIN") return
       try {
         const res = await fetch("/api/login-requests?status=PENDING")
         if (res.ok) {
           const data = await res.json()
           setPendingCount(Array.isArray(data) ? data.length : 0)
         }
-      } catch {
-        // silent
-      }
+      } catch { /* silent */ }
     }
     fetchPendingCount()
   }, [status, session])
 
   const navItems: NavItem[] = baseNavItems.map((item) =>
-    item.href === "/admin/requests"
-      ? { ...item, badge: pendingCount }
-      : item
+    item.href === "/admin/requests" ? { ...item, badge: pendingCount } : item
   )
 
-  if (status === "loading") {
+  // Show spinner while loading or before role is confirmed
+  if (status === "loading" || !session?.user?.role) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <span className="material-symbols-outlined animate-spin text-primary-container text-4xl">progress_activity</span>
@@ -67,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     )
   }
 
-  if (status === "unauthenticated" || session?.user?.role !== "ADMIN") {
+  if (session?.user?.role !== "ADMIN") {
     return null
   }
 

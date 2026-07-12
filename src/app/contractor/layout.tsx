@@ -20,18 +20,21 @@ export default function ContractorLayout({ children }: { children: React.ReactNo
   const router = useRouter()
 
   useEffect(() => {
+    if (status === "loading") return
+
     if (status === "unauthenticated") {
       router.push("/login")
+      return
     }
-    if (status === "authenticated" && session?.user?.role !== "CONTRACTOR") {
-      const role = session?.user?.role
-      if (role === "ADMIN") router.replace("/admin")
-      else if (role === "OFFICER") router.replace("/officer")
-      else router.replace("/login")
-    }
+
+    const role = session?.user?.role
+    if (!role) return
+
+    if (role === "ADMIN") { router.replace("/admin"); return }
+    if (role === "OFFICER") { router.replace("/officer"); return }
   }, [status, session, router])
 
-  if (status === "loading") {
+  if (status === "loading" || !session?.user?.role) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <span className="material-symbols-outlined animate-spin text-primary-container text-4xl">progress_activity</span>
@@ -39,7 +42,7 @@ export default function ContractorLayout({ children }: { children: React.ReactNo
     )
   }
 
-  if (status === "unauthenticated" || session?.user?.role !== "CONTRACTOR") {
+  if (session?.user?.role !== "CONTRACTOR") {
     return null
   }
 
