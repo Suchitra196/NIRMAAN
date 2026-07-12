@@ -400,7 +400,7 @@ export default async function LandingPage() {
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                     map
                   </span>
-                  View Locations
+                  <Link href="/locations">View Locations</Link>
                 </button>
                 <button className="inline-flex items-center gap-2 px-5 py-2.5 border border-white/30 text-white rounded hover:bg-white/10 transition text-sm font-medium">
                   Contact Us
