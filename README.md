@@ -2,7 +2,7 @@ NIRMAAN — Government Projects Finance Management System
 
 NIRMAAN is a full-stack finance management system built for tracking and managing government project funding, expenditure, and reporting. It grew out of an earlier academic prototype (GPOMS) into a production-style application with a relational backend, a secured REST API, interactive dashboards, and an AI-powered chatbot for natural-language data queries.
 
-Demo Link
+[nirmaan-gpoms.vercel.app](https://nirmaan-gpoms.vercel.app/)
 
 
 
@@ -33,7 +33,23 @@ Planned enhancements include richer historical trend analysis across project tim
 
 Screenshots of Visualizations/Results
 
-Add screenshots of the React dashboards, project tracking views, and chatbot interface here.
+<img width="1265" height="665" alt="image" src="https://github.com/user-attachments/assets/e4cde241-ff5a-497a-8bf7-31006d1deef2" />
+
+<img width="1259" height="667" alt="image" src="https://github.com/user-attachments/assets/3f26e8b9-b84b-4768-8eaa-23d8ba94e825" />
+
+<img width="1271" height="667" alt="image" src="https://github.com/user-attachments/assets/447e1d64-13a8-4947-86a3-41ab8340d23c" />
+
+<img width="1280" height="663" alt="image" src="https://github.com/user-attachments/assets/08ab1be3-80f0-4122-b454-e026e111b91b" />
+
+<img width="1280" height="664" alt="image" src="https://github.com/user-attachments/assets/32398c2d-df3c-492b-be0d-ac093ca126f4" />
+
+<img width="1280" height="662" alt="image" src="https://github.com/user-attachments/assets/6f114f6a-988f-4411-ab73-d86c665e006b" />
+
+
+
+
+
+
 
 Technologies
 
@@ -84,7 +100,6 @@ Approach
 Schema design — Modeled the 12-table relational structure covering projects, departments, funding sources, disbursements, and contractors, with appropriate foreign key relationships and constraints.
 Backend API — Built a Spring Boot REST API secured with JWT authentication, exposing endpoints for CRUD operations on projects, funds, and disbursements.
 Frontend dashboards — Built React dashboards to visualize project status, budget allocation vs. utilization, and department-level summaries.
-RAG chatbot — Implemented a retrieval-augmented chatbot using LangChain and FAISS for context retrieval, backed by Gemini, allowing users to ask natural-language questions about the data.
 Text-to-SQL — Added a layer that translates natural-language queries into SQL scoped to the project's schema, enabling ad-hoc reporting without writing SQL manually.
 CI/CD — Set up Docker containerization and GitHub Actions workflows for automated builds and deployment.
 
@@ -93,6 +108,11 @@ Status
 
 In progress. Core backend (schema, REST API, JWT auth), frontend dashboards, and the RAG chatbot / text-to-SQL layer are built; ongoing work includes refining the chatbot's query scope and expanding dashboard visualizations.
 
+
+
 Credits
 
-Built by Suchitra (Suchi), Computer Engineering, Cummins College of Engineering for Women, Pune.
+Built by ,
+Suchitra Sonar,
+Computer Engineering,
+Cummins College of Engineering for Women, Pune.
