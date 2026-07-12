@@ -10,11 +10,11 @@ export const LANDING_IMAGES = {
   ],
   about: { slot: "about", label: "About NIRMAAN", src: null as string | null },
   gallery: [
-    { slot: "gallery-1", label: "Works & Construction", src: null as string | null },
-    { slot: "gallery-2", label: "Agriculture Projects", src: null as string | null },
-    { slot: "gallery-3", label: "Health Infrastructure", src: null as string | null },
-    { slot: "gallery-4", label: "Education Buildings", src: null as string | null },
-    { slot: "gallery-5", label: "Water Supply", src: null as string | null },
-    { slot: "gallery-6", label: "Rural Development", src: null as string | null },
+    { slot: "gallery-1", label: "Works & Construction", src: "C:\Users\DELL\OneDrive\New folder\NIRMAAN Project\gpoms-app\landing page images\works and construction.jpg" },
+    { slot: "gallery-2", label: "Agriculture Projects", src: "C:\Users\DELL\OneDrive\New folder\NIRMAAN Project\gpoms-app\landing page images\Agricultural projects.jpg" },
+    { slot: "gallery-3", label: "Health Infrastructure", src: "C:\Users\DELL\OneDrive\New folder\NIRMAAN Project\gpoms-app\landing page images\healthcare infrastructure.jpg" },
+    { slot: "gallery-4", label: "Education Buildings", src: "C:\Users\DELL\OneDrive\New folder\NIRMAAN Project\gpoms-app\landing page images\educational buildings.jpg" },
+    { slot: "gallery-5", label: "Water Supply", src: "C:\Users\DELL\OneDrive\New folder\NIRMAAN Project\gpoms-app\landing page images\water supply.jpg" },
+    { slot: "gallery-6", label: "Rural Development", src: "C:\Users\DELL\OneDrive\New folder\NIRMAAN Project\gpoms-app\landing page images\rural development.jpg" },
   ],
 } as const;
