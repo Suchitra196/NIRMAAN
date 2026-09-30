@@ -198,7 +198,7 @@ export default function LoginPage() {
       <div className="relative hidden lg:flex flex-col justify-between p-xl overflow-hidden bg-primary">
         <div
           className="absolute inset-0 w-full h-full bg-cover bg-center mix-blend-overlay opacity-40"
-          style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuB29woBKx2zvZ35EsjEtbGo0o0MSc38oNq9AmqPqebOJOyENN0vUfh7LI0-STDTLaJ0FTC4OQTiHxSdsiF6UNLlMXDn5YRHXL2sirUMvdd_KnjQ5thg16bc_i2Q035MAWzBthUVNnXDmaP3d4Huw-jWt1uIW9SuEIGlvMPhc492fDFzcPjBGs4F9rqFmLf79E5DgmnZj0LXv0j6ibbTuoZCxumGH_RHHSwP-JmjaXS1NzcKFUsig0l2AFvfe8DDYT0K7jfry5To1w')" }}
+          style={{ backgroundImage: "url('/images/login-bg.jpg')" }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/80 to-transparent"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-transparent"></div>
@@ -213,20 +213,20 @@ export default function LoginPage() {
             <img
               alt="NIRMAAN Logo"
               className="h-24 w-auto object-contain drop-shadow-md"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuByyJ7xYLb9uzMxMCbnpc6HZWc6lE5564hI04IexbvqVtY7aR8JOuSzZDfH2gJHFbM6zVxl9wJcXVzfTnT5_0XX3ZPZZnf_B23RJEhFdEjw7XR5GH4gTa1MXAAgjmwhQHSNFVP06GEju49_D0K2DsFHBjZAzUqK5wNb02ipP9YIV3M-E2NbTGD99P_pvjF3n2RQatvTMVZDcmypCTF_TKgbj4Tlhrg9NSMui7XbnhvQRSstaeu17opOh8dsWmwJA2eC3sXl00AVvg"
+              src="/images/about.jpg"
             />
           </div>
           <div className="mt-lg">
             <h1 className="font-display-lg text-4xl text-on-primary tracking-tight font-bold">NIRMAAN</h1>
             <p className="font-body-lg text-lg text-primary-fixed-dim mt-xs max-w-[28rem]">
-              Government Project Management System
+              Government Projects Finance Management System (Academic Demo)
             </p>
           </div>
         </div>
 
         <div className="relative z-10 flex items-center gap-sm text-primary-fixed-dim font-label-sm text-xs uppercase tracking-wider mt-auto mb-8">
-          <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>shield_lock</span>
-          <span>Classified &amp; Secure Infrastructure Gateway</span>
+          <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>school</span>
+          <span>Academic Research Prototype &bull; Simulated Environment</span>
         </div>
       </div>
 
@@ -238,7 +238,7 @@ export default function LoginPage() {
           <img
             alt="NIRMAAN Logo"
             className="h-16 w-auto object-contain mb-sm"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuByyJ7xYLb9uzMxMCbnpc6HZWc6lE5564hI04IexbvqVtY7aR8JOuSzZDfH2gJHFbM6zVxl9wJcXVzfTnT5_0XX3ZPZZnf_B23RJEhFdEjw7XR5GH4gTa1MXAAgjmwhQHSNFVP06GEju49_D0K2DsFHBjZAzUqK5wNb02ipP9YIV3M-E2NbTGD99P_pvjF3n2RQatvTMVZDcmypCTF_TKgbj4Tlhrg9NSMui7XbnhvQRSstaeu17opOh8dsWmwJA2eC3sXl00AVvg"
+            src="/images/about.jpg"
           />
           <h1 className="font-headline-lg-mobile text-2xl text-primary tracking-tight font-bold">NIRMAAN</h1>
         </div>
@@ -336,7 +336,7 @@ export default function LoginPage() {
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="https://www.google.com/favicon.ico"
+                        src="/google-icon.svg"
                         alt="Google"
                         className="w-5 h-5 bg-white rounded-full p-0.5"
                       />
@@ -580,10 +580,10 @@ export default function LoginPage() {
         <div className="mt-xl flex flex-col items-center justify-center gap-xs text-center mt-12">
           <p className="font-label-sm text-xs text-on-surface-variant/80 uppercase tracking-widest flex items-center gap-2">
             <span className="w-6 h-[1px] bg-outline-variant/50"></span>
-            Digital India Initiative
+            Academic Project Demonstration
             <span className="w-6 h-[1px] bg-outline-variant/50"></span>
           </p>
-          <p className="font-label-sm text-xs text-outline">Ministry of Infrastructure &amp; Development</p>
+          <p className="font-label-sm text-xs text-outline">Student &amp; Research Prototype &bull; Simulated Public Data</p>
         </div>
       </div>
     </div>

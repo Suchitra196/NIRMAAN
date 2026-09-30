@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { SAMPLE_STATS } from "@/lib/sampleProjects";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,10 @@ export async function GET() {
         }),
       ]);
 
+    if (!totalProjects || totalProjects === 0) {
+      return NextResponse.json(SAMPLE_STATS);
+    }
+
     return NextResponse.json({
       totalProjects,
       ongoingProjects,
@@ -35,19 +40,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("Error fetching public stats:", error);
-    return NextResponse.json(
-      {
-        totalProjects: 0,
-        ongoingProjects: 0,
-        delayedProjects: 0,
-        completedProjects: 0,
-        totalBudgetPlanned: 0,
-        totalBudgetActual: 0,
-        totalTenderValue: 0,
-        departmentBreakdown: [{ department: "WORKS_CONSTRUCTION", count: 0 }],
-      },
-      { status: 200 }
-    );
+    console.error("Database unavailable in public stats, falling back to SAMPLE_STATS:", error);
+    return NextResponse.json(SAMPLE_STATS, { status: 200 });
   }
 }

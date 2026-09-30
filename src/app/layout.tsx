@@ -18,9 +18,11 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+import DemoDisclaimerBanner from "@/components/common/DemoDisclaimerBanner";
+
 export const metadata: Metadata = {
-  title: "NIRMAAN - Government Project Management System",
-  description: "Secure and classified infrastructure gateway.",
+  title: "NIRMAAN — Government Projects Finance Management System (Academic Demo)",
+  description: "Academic demonstration platform for transparent public project finance, fund allocation, and contractor milestone tracking across Maharashtra. All data is sample data.",
 };
 
 export default function RootLayout({
@@ -40,6 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <DemoDisclaimerBanner />
         <AppProvider>
           {children}
         </AppProvider>

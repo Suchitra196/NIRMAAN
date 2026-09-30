@@ -4,90 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 
-// All 36 districts of Maharashtra grouped by division
-const MAHARASHTRA_DISTRICTS = [
-  {
-    division: "Konkan",
-    color: "#000080",
-    icon: "water",
-    districts: [
-      "Mumbai City",
-      "Mumbai Suburban",
-      "Thane",
-      "Palghar",
-      "Raigad",
-      "Ratnagiri",
-      "Sindhudurg",
-    ],
-  },
-  {
-    division: "Nashik",
-    color: "#319e23",
-    icon: "park",
-    districts: [
-      "Nashik",
-      "Dhule",
-      "Nandurbar",
-      "Jalgaon",
-      "Ahmednagar",
-    ],
-  },
-  {
-    division: "Pune",
-    color: "#fe9832",
-    icon: "location_city",
-    districts: [
-      "Pune",
-      "Satara",
-      "Sangli",
-      "Solapur",
-      "Kolhapur",
-    ],
-  },
-  {
-    division: "Aurangabad (Chhatrapati Sambhajinagar)",
-    color: "#6d3a00",
-    icon: "fort",
-    districts: [
-      "Chhatrapati Sambhajinagar",
-      "Jalna",
-      "Beed",
-      "Latur",
-      "Osmanabad (Dharashiv)",
-      "Nanded",
-      "Hingoli",
-      "Parbhani",
-    ],
-  },
-  {
-    division: "Amravati",
-    color: "#ba1a1a",
-    icon: "agriculture",
-    districts: [
-      "Amravati",
-      "Akola",
-      "Washim",
-      "Buldhana",
-      "Yavatmal",
-    ],
-  },
-  {
-    division: "Nagpur",
-    color: "#00003c",
-    icon: "account_balance",
-    districts: [
-      "Nagpur",
-      "Wardha",
-      "Chandrapur",
-      "Gadchiroli",
-      "Gondia",
-      "Bhandara",
-    ],
-  },
-]
-
-// Flatten for total count
-const ALL_DISTRICTS = MAHARASHTRA_DISTRICTS.flatMap((d) => d.districts)
+import { MAHARASHTRA_DIVISIONS as MAHARASHTRA_DISTRICTS, ALL_DISTRICTS } from "@/lib/maharashtra"
 
 interface Project {
   id: string
@@ -253,8 +170,8 @@ export default function ViewLocationsPage() {
       <div className="bg-[#00003c] text-white text-xs py-1.5 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>🇮🇳</span>
-            <span>Government of India</span>
+            <span className="material-symbols-outlined text-amber-400 text-sm">school</span>
+            <span>NIRMAAN Academic Prototype — 36 Maharashtra Districts</span>
           </div>
           <Link href="/" className="hover:underline flex items-center gap-1">
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
@@ -495,22 +412,28 @@ export default function ViewLocationsPage() {
               shield
             </span>
             <span className="font-semibold">NIRMAAN</span>
-            <span className="text-white/50">— Zilla Parishad Project Management System</span>
+            <span className="text-white/50">— Academic Demonstration Portal</span>
           </div>
           <div className="flex gap-4 text-white/60 text-xs">
             <Link href="/" className="hover:text-white transition">
               Home
             </Link>
-            <a href="#" className="hover:text-white transition">
+            <Link href="/terms" className="hover:text-white transition">
               Terms
-            </a>
-            <a href="#" className="hover:text-white transition">
+            </Link>
+            <Link href="/privacy" className="hover:text-white transition">
               Privacy
-            </a>
+            </Link>
+            <Link href="/accessibility" className="hover:text-white transition">
+              Accessibility
+            </Link>
+            <Link href="/sitemap" className="hover:text-white transition">
+              Sitemap
+            </Link>
           </div>
         </div>
         <div className="border-t border-white/10 py-3 text-center text-xs text-white/40">
-          © 2025 NIRMAAN. All rights reserved. | Government of Maharashtra
+          © NIRMAAN (GPOMS) Academic Demonstration | Non-Governmental Educational Project
         </div>
       </footer>
     </div>

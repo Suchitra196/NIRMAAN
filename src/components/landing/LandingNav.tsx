@@ -14,8 +14,8 @@ export default function LandingNav() {
       <div className="bg-[#00003c] text-white text-xs py-1.5 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-base">🇮🇳</span>
-            <span>Government of India</span>
+            <span className="material-symbols-outlined text-amber-400 text-sm">school</span>
+            <span>NIRMAAN Academic Prototype — Public Finance Management</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="#main" className="hover:underline">
@@ -37,9 +37,9 @@ export default function LandingNav() {
                 contrast
               </span>
             </button>
-            <a href="#" className="hover:underline">
-              More
-            </a>
+            <Link href="/sitemap" className="hover:underline">
+              Sitemap
+            </Link>
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@ export default function LandingNav() {
 
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-6 flex-1 justify-center text-sm font-medium text-[#00003c]">
-            <Link href="#about" className="hover:text-[#000080] transition">
+            <Link href="/about" className="hover:text-[#000080] transition">
               About Us
             </Link>
             <div className="relative">
@@ -82,22 +82,22 @@ export default function LandingNav() {
                   onMouseEnter={() => setCitizenOpen(true)}
                   onMouseLeave={() => setCitizenOpen(false)}
                 >
-                  <a href="#" className="block px-4 py-2 hover:bg-surface-container text-sm">
-                    Schemes
-                  </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-surface-container text-sm">
+                  <Link href="/tenders" className="block px-4 py-2 hover:bg-surface-container text-sm">
+                    Tenders &amp; Schemes
+                  </Link>
+                  <Link href="/faq" className="block px-4 py-2 hover:bg-surface-container text-sm">
                     FAQs
-                  </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-surface-container text-sm">
-                    Grievances
-                  </a>
+                  </Link>
+                  <Link href="/contact" className="block px-4 py-2 hover:bg-surface-container text-sm">
+                    Grievances &amp; Contact
+                  </Link>
                 </div>
               )}
             </div>
-            <Link href="#gallery" className="hover:text-[#000080] transition">
-              Gallery
+            <Link href="/locations" className="hover:text-[#000080] transition">
+              Locations (36 Districts)
             </Link>
-            <Link href="#" className="hover:text-[#000080] transition">
+            <Link href="/tenders" className="hover:text-[#000080] transition">
               Opportunities
             </Link>
             <div className="relative">
@@ -117,15 +117,18 @@ export default function LandingNav() {
                   onMouseEnter={() => setResourcesOpen(true)}
                   onMouseLeave={() => setResourcesOpen(false)}
                 >
-                  <a href="#" className="block px-4 py-2 hover:bg-surface-container text-sm">
-                    Guidelines
-                  </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-surface-container text-sm">
-                    Downloads
-                  </a>
-                  <a href="#" className="block px-4 py-2 hover:bg-surface-container text-sm">
-                    Reports
-                  </a>
+                  <Link href="/circulars" className="block px-4 py-2 hover:bg-surface-container text-sm">
+                    Circulars &amp; Guidelines
+                  </Link>
+                  <Link href="/downloads" className="block px-4 py-2 hover:bg-surface-container text-sm">
+                    Downloads &amp; Forms
+                  </Link>
+                  <Link href="/governance" className="block px-4 py-2 hover:bg-surface-container text-sm">
+                    Governance Model
+                  </Link>
+                  <Link href="/rti" className="block px-4 py-2 hover:bg-surface-container text-sm">
+                    RTI Disclosure
+                  </Link>
                 </div>
               )}
             </div>
@@ -171,26 +174,32 @@ export default function LandingNav() {
         {menuOpen && (
           <div className="md:hidden border-t border-outline-variant bg-white">
             <div className="px-4 py-3 space-y-3 text-sm font-medium text-[#00003c]">
-              <a href="#about" className="block py-2">
+              <Link href="/about" onClick={() => setMenuOpen(false)} className="block py-2">
                 About Us
-              </a>
-              <a href="#" className="block py-2">
-                Citizen Corner
-              </a>
-              <a href="#gallery" className="block py-2">
-                Gallery
-              </a>
-              <a href="#" className="block py-2">
-                Opportunities
-              </a>
-              <a href="#" className="block py-2">
-                Resources
-              </a>
+              </Link>
+              <Link href="/locations" onClick={() => setMenuOpen(false)} className="block py-2">
+                Locations (36 Districts)
+              </Link>
+              <Link href="/tenders" onClick={() => setMenuOpen(false)} className="block py-2">
+                Tenders &amp; Opportunities
+              </Link>
+              <Link href="/faq" onClick={() => setMenuOpen(false)} className="block py-2">
+                FAQs &amp; Citizen Corner
+              </Link>
+              <Link href="/downloads" onClick={() => setMenuOpen(false)} className="block py-2">
+                Resources &amp; Downloads
+              </Link>
+              <Link href="/circulars" onClick={() => setMenuOpen(false)} className="block py-2">
+                Circulars &amp; Guidelines
+              </Link>
+              <Link href="/contact" onClick={() => setMenuOpen(false)} className="block py-2">
+                Contact &amp; Grievances
+              </Link>
               <hr className="border-outline-variant" />
-              <Link href="/login" className="block py-2">
+              <Link href="/login" onClick={() => setMenuOpen(false)} className="block py-2">
                 Login
               </Link>
-              <Link href="/register" className="block py-2">
+              <Link href="/register" onClick={() => setMenuOpen(false)} className="block py-2 text-[#fe9832] font-semibold">
                 Sign Up
               </Link>
             </div>

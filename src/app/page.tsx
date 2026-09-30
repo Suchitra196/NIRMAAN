@@ -10,6 +10,9 @@ import NewsTicker from "@/components/landing/NewsTicker";
 import InsightsSection from "@/components/landing/InsightsSection";
 import GalleryCarousel from "@/components/landing/GalleryCarousel";
 
+import { TOTAL_DISTRICTS_COUNT } from "@/lib/maharashtra";
+import { SAMPLE_PROJECTS, SAMPLE_STATS } from "@/lib/sampleProjects";
+
 // ------------------------------------------------------------------
 // Types
 // ------------------------------------------------------------------
@@ -37,6 +40,18 @@ async function getStats() {
       prisma.project.count({ where: { status: "COMPLETED" } }),
       prisma.project.aggregate({ _sum: { budgetPlanned: true, budgetActual: true } }),
     ]);
+
+    if (!total || total === 0) {
+      return {
+        totalProjects: SAMPLE_STATS.totalProjects,
+        ongoingProjects: SAMPLE_STATS.ongoingProjects,
+        delayedProjects: SAMPLE_STATS.delayedProjects,
+        completedProjects: SAMPLE_STATS.completedProjects,
+        totalBudgetPlanned: SAMPLE_STATS.totalBudgetPlanned,
+        totalBudgetActual: SAMPLE_STATS.totalBudgetActual,
+      };
+    }
+
     return {
       totalProjects: total,
       ongoingProjects: ongoing,
@@ -47,19 +62,19 @@ async function getStats() {
     };
   } catch {
     return {
-      totalProjects: 0,
-      ongoingProjects: 0,
-      delayedProjects: 0,
-      completedProjects: 0,
-      totalBudgetPlanned: 0,
-      totalBudgetActual: 0,
+      totalProjects: SAMPLE_STATS.totalProjects,
+      ongoingProjects: SAMPLE_STATS.ongoingProjects,
+      delayedProjects: SAMPLE_STATS.delayedProjects,
+      completedProjects: SAMPLE_STATS.completedProjects,
+      totalBudgetPlanned: SAMPLE_STATS.totalBudgetPlanned,
+      totalBudgetActual: SAMPLE_STATS.totalBudgetActual,
     };
   }
 }
 
 async function getLatestProjects(): Promise<PublicProject[]> {
   try {
-    return await prisma.project.findMany({
+    const projects = await prisma.project.findMany({
       select: {
         id: true,
         name: true,
@@ -73,8 +88,30 @@ async function getLatestProjects(): Promise<PublicProject[]> {
       orderBy: { createdAt: "desc" },
       take: 6,
     });
+
+    if (!projects || projects.length === 0) {
+      return SAMPLE_PROJECTS.slice(0, 6).map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        status: p.status,
+        budgetPlanned: p.budgetPlanned,
+        budgetActual: p.budgetActual,
+        officer: { name: p.officerName },
+      }));
+    }
+
+    return projects;
   } catch {
-    return [];
+    return SAMPLE_PROJECTS.slice(0, 6).map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      status: p.status,
+      budgetPlanned: p.budgetPlanned,
+      budgetActual: p.budgetActual,
+      officer: { name: p.officerName },
+    }));
   }
 }
 
@@ -187,10 +224,10 @@ export default async function LandingPage() {
                 About NIRMAAN
               </h2>
               <p className="text-on-surface-variant leading-relaxed font-[family:var(--font-inter)] mb-4">
-                NIRMAAN (Networked Infrastructure & Resource Management for Administration and
-                Nodal Authorities) is the official project management system of the Maharashtra
-                Zilla Parishad. It provides a unified digital platform for planning, executing,
-                and monitoring government infrastructure projects across all 34 districts of
+                NIRMAAN (Networked Infrastructure &amp; Resource Management for Administration and
+                Nodal Authorities) is an academic project management platform demonstrating transparent
+                public infrastructure finance. It models a unified digital framework for planning, executing,
+                and monitoring public development projects across all {TOTAL_DISTRICTS_COUNT} districts of
                 Maharashtra.
               </p>
               <p className="text-on-surface-variant leading-relaxed font-[family:var(--font-inter)] mb-6">
@@ -390,21 +427,26 @@ export default async function LandingPage() {
                 District Coverage
               </h2>
               <p className="text-white/75 leading-relaxed font-[family:var(--font-inter)] mb-6">
-                NIRMAAN spans all 34 districts of Maharashtra, supporting Zilla Parishad offices
-                from Konkan to Vidarbha. Every project, from rural road construction to health
-                centre upgrades, is tracked in real time. The system currently covers over 350+
-                sub-divisions and 6 administrative divisions under the Maharashtra Government.
+                NIRMAAN models project tracking across all {TOTAL_DISTRICTS_COUNT} districts of Maharashtra,
+                demonstrating transparent workflow tracking from Konkan to Vidarbha. Every project, from rural road
+                construction to health centre upgrades, is tracked in simulated real time across 6 administrative divisions.
               </p>
               <div className="flex flex-wrap gap-3">
-                <button className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#fe9832] text-[#00003c] rounded hover:opacity-90 transition text-sm font-semibold">
+                <Link
+                  href="/locations"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#fe9832] text-[#00003c] rounded hover:opacity-90 transition text-sm font-semibold"
+                >
                   <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                     map
                   </span>
-                  <Link href="/locations">View Locations</Link>
-                </button>
-                <button className="inline-flex items-center gap-2 px-5 py-2.5 border border-white/30 text-white rounded hover:bg-white/10 transition text-sm font-medium">
+                  View All {TOTAL_DISTRICTS_COUNT} Districts
+                </Link>
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 border border-white/30 text-white rounded hover:bg-white/10 transition text-sm font-medium"
+                >
                   Contact Us
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -535,33 +577,27 @@ export default async function LandingPage() {
                   project governance.
                 </p>
                 <div className="flex gap-3">
-                  <a
-                    href="#"
-                    aria-label="LinkedIn"
-                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center"
+                  <Link
+                    href="/about"
+                    aria-label="About NIRMAAN"
+                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center text-white"
                   >
-                    <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
-                      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                    </svg>
-                  </a>
-                  <a
-                    href="#"
-                    aria-label="Twitter / X"
-                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center"
+                    <span className="material-symbols-outlined text-sm">info</span>
+                  </Link>
+                  <Link
+                    href="/contact"
+                    aria-label="Contact Us"
+                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center text-white"
                   >
-                    <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L2.42 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                    </svg>
-                  </a>
-                  <a
-                    href="#"
-                    aria-label="YouTube"
-                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center"
+                    <span className="material-symbols-outlined text-sm">mail</span>
+                  </Link>
+                  <Link
+                    href="/sitemap"
+                    aria-label="Sitemap"
+                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center text-white"
                   >
-                    <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                    </svg>
-                  </a>
+                    <span className="material-symbols-outlined text-sm">map</span>
+                  </Link>
                 </div>
               </div>
 
@@ -569,19 +605,43 @@ export default async function LandingPage() {
               {[
                 {
                   heading: "About",
-                  links: ["About NIRMAAN", "Vision & Mission", "Team", "Governance", "Careers"],
+                  links: [
+                    { label: "About NIRMAAN", href: "/about" },
+                    { label: "Vision & Mission", href: "/vision-mission" },
+                    { label: "Governance & RBAC", href: "/governance" },
+                    { label: "Locations Directory", href: "/locations" },
+                    { label: "FAQs & Help", href: "/faq" },
+                  ],
                 },
                 {
-                  heading: "Officers",
-                  links: ["Officer Login", "Register", "Handbook", "Training", "Support"],
+                  heading: "Portals",
+                  links: [
+                    { label: "Officer Login", href: "/login" },
+                    { label: "Contractor Sign In", href: "/login" },
+                    { label: "New Account Request", href: "/register" },
+                    { label: "Pending Approvals", href: "/pending-approval" },
+                    { label: "Support & Grievances", href: "/contact" },
+                  ],
                 },
                 {
                   heading: "Projects",
-                  links: ["All Projects", "By District", "By Department", "Reports", "Archive"],
+                  links: [
+                    { label: "36 Maharashtra Districts", href: "/locations" },
+                    { label: "Public Project Insights", href: "#insights" },
+                    { label: "Works & Infrastructure", href: "/tenders" },
+                    { label: "Administrative Reports", href: "/governance" },
+                    { label: "RTI Public Disclosures", href: "/rti" },
+                  ],
                 },
                 {
                   heading: "Resources",
-                  links: ["Guidelines", "Downloads", "Tenders", "Circulars", "RTI"],
+                  links: [
+                    { label: "Circulars & Directives", href: "/circulars" },
+                    { label: "Downloads & Manuals", href: "/downloads" },
+                    { label: "Simulated Tenders", href: "/tenders" },
+                    { label: "Accessibility Statement", href: "/accessibility" },
+                    { label: "Full Sitemap", href: "/sitemap" },
+                  ],
                 },
               ].map((col) => (
                 <div key={col.heading}>
@@ -590,13 +650,13 @@ export default async function LandingPage() {
                   </h4>
                   <ul className="space-y-2">
                     {col.links.map((link) => (
-                      <li key={link}>
-                        <a
-                          href="#"
+                      <li key={link.label}>
+                        <Link
+                          href={link.href}
                           className="text-sm text-white/60 hover:text-white transition"
                         >
-                          {link}
-                        </a>
+                          {link.label}
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -604,21 +664,21 @@ export default async function LandingPage() {
               ))}
             </div>
 
-            {/* Powered by */}
+            {/* Academic Prototype Banner */}
             <div className="border-t border-white/10 pt-6 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[#fe9832]" style={{ fontSize: 22 }}>
-                    computer
+                    school
                   </span>
                 </div>
                 <div>
                   <div className="text-xs text-white/40 uppercase tracking-widest">
-                    Technology Partner
+                    Academic Prototype
                   </div>
-                  <div className="text-sm font-semibold">
-                    Powered by{" "}
-                    <span className="text-[#fe9832]">Digital India</span>
+                  <div className="text-sm font-semibold text-white">
+                    Non-Governmental Educational Demonstration &bull;{" "}
+                    <span className="text-[#fe9832]">Simulated Sample Data</span>
                   </div>
                 </div>
               </div>
@@ -629,15 +689,18 @@ export default async function LandingPage() {
           <div className="border-t border-white/10 bg-black/20">
             <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-white/50">
               <span>
-                © 2025 NIRMAAN — Zilla Parishad Project Management System. All rights reserved.
+                &copy; NIRMAAN (GPOMS) — Academic Demonstration Portal. Developed for research &amp; education. All data is sample data.
               </span>
               <div className="flex gap-4">
-                <a href="#" className="hover:text-white transition">
+                <Link href="/terms" className="hover:text-white transition">
                   Terms &amp; Conditions
-                </a>
-                <a href="#" className="hover:text-white transition">
+                </Link>
+                <Link href="/privacy" className="hover:text-white transition">
                   Privacy Policy
-                </a>
+                </Link>
+                <Link href="/accessibility" className="hover:text-white transition">
+                  Accessibility
+                </Link>
               </div>
             </div>
           </div>
